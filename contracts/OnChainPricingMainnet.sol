@@ -11,7 +11,9 @@ import "../interfaces/curve/ICurveRouter.sol";
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
-contract OnChainPricing {
+/// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
+/// @notice To spin a variant, just change the constants and use the Component Functions at the end of the file
+contract OnChainPricingMainnet {
     
     // Assumption #1 Most tokens liquid pair is WETH (WETH is tokenized ETH for that chain)
     // e.g on Fantom, WETH would be wFTM
@@ -68,7 +70,7 @@ contract OnChainPricing {
     }
     
 
-    /// === Generic Functions === /// 
+    /// === Component Functions === /// 
     /// Why bother?
     /// Because each chain is slightly different but most use similar tech / forks
     /// May as well use the separate functoions so each OnChain Pricing on different chains will be slightly different
