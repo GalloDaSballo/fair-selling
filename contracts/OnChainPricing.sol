@@ -17,14 +17,14 @@ contract OnChainPricing {
     // e.g on Fantom, WETH would be wFTM
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
-    /// == Uni V2 Like Routers || TODO: I think these revert on non-existent pair == //
+    /// == Uni V2 Like Routers || These revert on non-existent pair == //
     // UniV2
     address public constant UNIV2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D; // Spookyswap
     // Sushi
     address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
 
     // Curve / Doesn't revert on failure
-    address public constant CURVE_ROUTER = 0x74E25054e98fd3FCd4bbB13A962B43E49098586f; // Curve quote and swaps
+    address public constant CURVE_ROUTER = 0x8e764bE4288B842791989DB5b8ec067279829809; // Curve quote and swaps
 
 
     struct Quote {
@@ -33,7 +33,7 @@ contract OnChainPricing {
     }
 
     /// @dev View function for testing the routing of the strategy
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory) {
         uint256 length = 3; // Add length you need
 
         Quote[] memory quotes = new Quote[](length); 
@@ -46,6 +46,9 @@ contract OnChainPricing {
 
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
         quotes[2] = Quote("sushi", sushiQuote);
+
+
+        /// TODO: Add Balancer and UniV3
         
 
         // Because this is a generalized contract, it is best to just loop,
