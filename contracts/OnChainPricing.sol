@@ -27,18 +27,41 @@ contract OnChainPricing {
     address public constant CURVE_ROUTER = 0x74E25054e98fd3FCd4bbB13A962B43E49098586f; // Curve quote and swaps
 
 
+    struct Quote {
+        string name;
+        uint256 amountOut;
+    }
+
     /// @dev View function for testing the routing of the strategy
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (string memory, uint256) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory) {
+        uint256 length = 3; // Add length you need
+
+        Quote[] memory quotes = new Quote[](length); 
+
         uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        quotes[0] = Quote("curve", curveQuote);
 
         uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
+        quotes[1] = Quote("uniV2", uniQuote);
+
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
+        quotes[2] = Quote("sushi", sushiQuote);
         
 
         // Because this is a generalized contract, it is best to just loop,
         // Ideally we have a hierarchy for each chain to save some extra gas, but I think it's ok
+        // O(n) complexity and each check is like 9 gas
+        Quote memory bestQuote = quotes[0];
+        unchecked {
+            for(uint256 x = 1; x < length; ++x) {
+                if(quotes[x].amountOut > bestQuote.amountOut) {
+                    bestQuote = quotes[x];
+                }
+            }
+        }
 
 
+        return bestQuote;
     }
     
 
