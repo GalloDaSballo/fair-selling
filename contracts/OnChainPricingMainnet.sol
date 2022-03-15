@@ -84,6 +84,8 @@ contract OnChainPricingMainnet {
 
         uint256 quote; //0
 
+
+        // TODO: Consider doing check before revert to avoid paying extra gas
         try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
             quote = amounts[amounts.length - 1]; // Last one is the outToken
         } catch (bytes memory) {
