@@ -60,6 +60,8 @@ interface OnChainPricing {
       bytes32 buyTokenBalance;
   }
 
+
+
       /// @dev Return the EIP-712 signing hash for the specified order.
   ///
   /// @param order The order to compute the EIP-712 signing hash for.
@@ -177,29 +179,12 @@ contract CowSwapSeller {
   /// separator is computed following the EIP-712 standard and has replay
   /// protection mixed in so that signed orders are only valid for specific
   /// GPv2 contracts.
-  bytes32 public immutable domainSeparator;
+  /// @notice Copy pasted from mainnet because we need this
+  bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
 
   constructor(OnChainPricing _pricer) {
     pricer = _pricer;
     manager = msg.sender;
-
-    // NOTE: Currently, the only way to get the chain ID in solidity is
-    // using assembly.
-    uint256 chainId;
-    // solhint-disable-next-line no-inline-assembly
-    assembly {
-        chainId := chainid()
-    }
-
-    domainSeparator = keccak256(
-        abi.encode(
-            DOMAIN_TYPE_HASH,
-            DOMAIN_NAME,
-            DOMAIN_VERSION,
-            chainId,
-            address(this)
-        )
-    );
   }
 
   function setManager(address newManager) external {
@@ -213,14 +198,18 @@ contract CowSwapSeller {
     require(msg.sender == manager);
   }
 
-  function getOrderID(Data calldata orderData) public returns (bytes memory) {
+    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
+        return bytes32(bytes(source));
+    }
+
+  function getOrderID(Data calldata orderData) public view returns (bytes memory) {
     // Allocated
-    bytes memory OrderUid = new bytes(UID_LENGTH);
+    bytes memory orderUid = new bytes(UID_LENGTH);
 
     // Get the has
     bytes32 digest = hash(orderData, domainSeparator);
-    packOrderUidParams(OrderUid, digest, address(this), orderData.validTo);
+    packOrderUidParams(orderUid, digest, address(this), orderData.validTo);
 
-    return OrderUid;
+    return orderUid;
   }
 }
