@@ -88,12 +88,14 @@ def cowswap_sell(contract, sell_token, buy_token, amount_in, dev):
         deadline,
         "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24",
         str(fee_amount),
-        contract.stringToBytes32("sell"),
+        to_bytes32("sell"),
         False,
-        contract.stringToBytes32("erc20"),
-        contract.stringToBytes32("erc20")
+        to_bytes32("erc20"),
+        to_bytes32("erc20")
     ]
 
+    hashFromContract = contract.getHash(order_data, contract.domainSeparator())
+    print(f"Hash from Contract: {hashFromContract}")
     fromContract = contract.getOrderID(order_data)
     print(f"Order uid from Contract: {fromContract}")
 
@@ -106,3 +108,7 @@ def connect_account():
     dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
     click.echo(f"You are using: 'dev' [{dev.address}]")
     return dev
+
+
+def to_bytes32(value):
+    return web3.toHex(text=value)[::-1].zfill(34)[::-1]
