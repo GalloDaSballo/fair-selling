@@ -151,8 +151,12 @@ interface OnChainPricing {
 /// @title CowSwapSeller
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev Cowswap seller, a smart contract that receives order data and verifies if the order is worth going for
+/// @notice CREDIS
+/// Thank you Cowswap Team as well as Poolpi
+/// @notice For the awesome project and the tutorial: https://hackmd.io/@2jvugD4TTLaxyG3oLkPg-g/H14TQ1Omt
 contract CowSwapSeller {
-  OnChainPricing pricer;
+  OnChainPricing pricer; // Contract we will ask for a fair price of before accepting the cowswap order
+
   address manager;
 
   /// @dev The EIP-712 domain type hash used for computing the domain
