@@ -30,7 +30,7 @@ contract CowSwapSeller {
 
   address manager;
 
-  bytes32 private constant TYPE_HASH =
+    bytes32 private constant TYPE_HASH =
         hex"d5a25ba2e97094ad7d83dc28a6572da797d6b3e7fc6663bd93efb789fc17e489";
 
     // keccak256("sell")
@@ -40,77 +40,77 @@ contract CowSwapSeller {
     bytes32 public constant BALANCE_ERC20 =
         hex"5a28e9363bb942b639270062aa6bb295f434bcdfc42c97267bf003f272060dc9";
 
-  /// @dev The domain separator used for signing orders that gets mixed in
-  /// making signatures for different domains incompatible. This domain
-  /// separator is computed following the EIP-712 standard and has replay
-  /// protection mixed in so that signed orders are only valid for specific
-  /// GPv2 contracts.
-  /// @notice Copy pasted from mainnet because we need this
-  bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
-    // Cowswap Order Data Interface 
-  uint256 constant UID_LENGTH = 56;
+    /// @dev The domain separator used for signing orders that gets mixed in
+    /// making signatures for different domains incompatible. This domain
+    /// separator is computed following the EIP-712 standard and has replay
+    /// protection mixed in so that signed orders are only valid for specific
+    /// GPv2 contracts.
+    /// @notice Copy pasted from mainnet because we need this
+    bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
+        // Cowswap Order Data Interface 
+    uint256 constant UID_LENGTH = 56;
 
-  struct Data {
-      IERC20 sellToken;
-      IERC20 buyToken;
-      address receiver;
-      uint256 sellAmount;
-      uint256 buyAmount;
-      uint32 validTo;
-      bytes32 appData;
-      uint256 feeAmount;
-      bytes32 kind;
-      bool partiallyFillable;
-      bytes32 sellTokenBalance;
-      bytes32 buyTokenBalance;
-  }
-    
+    struct Data {
+        IERC20 sellToken;
+        IERC20 buyToken;
+        address receiver;
+        uint256 sellAmount;
+        uint256 buyAmount;
+        uint32 validTo;
+        bytes32 appData;
+        uint256 feeAmount;
+        bytes32 kind;
+        bool partiallyFillable;
+        bytes32 sellTokenBalance;
+        bytes32 buyTokenBalance;
+    }
+        
 
-  /// @dev Packs order UID parameters into the specified memory location. The
-  /// result is equivalent to `abi.encodePacked(...)` with the difference that
-  /// it allows re-using the memory for packing the order UID.
-  ///
-  /// This function reverts if the order UID buffer is not the correct size.
-  ///
-  /// @param orderUid The buffer pack the order UID parameters into.
-  /// @param orderDigest The EIP-712 struct digest derived from the order
-  /// parameters.
-  /// @param owner The address of the user who owns this order.
-  /// @param validTo The epoch time at which the order will stop being valid.
-  function packOrderUidParams(
-      bytes memory orderUid,
-      bytes32 orderDigest,
-      address owner,
-      uint32 validTo
-  ) pure public {
-      require(orderUid.length == UID_LENGTH, "GPv2: uid buffer overflow");
+    /// @dev Packs order UID parameters into the specified memory location. The
+    /// result is equivalent to `abi.encodePacked(...)` with the difference that
+    /// it allows re-using the memory for packing the order UID.
+    ///
+    /// This function reverts if the order UID buffer is not the correct size.
+    ///
+    /// @param orderUid The buffer pack the order UID parameters into.
+    /// @param orderDigest The EIP-712 struct digest derived from the order
+    /// parameters.
+    /// @param owner The address of the user who owns this order.
+    /// @param validTo The epoch time at which the order will stop being valid.
+    function packOrderUidParams(
+        bytes memory orderUid,
+        bytes32 orderDigest,
+        address owner,
+        uint32 validTo
+    ) pure public {
+        require(orderUid.length == UID_LENGTH, "GPv2: uid buffer overflow");
 
-      // NOTE: Write the order UID to the allocated memory buffer. The order
-      // parameters are written to memory in **reverse order** as memory
-      // operations write 32-bytes at a time and we want to use a packed
-      // encoding. This means, for example, that after writing the value of
-      // `owner` to bytes `20:52`, writing the `orderDigest` to bytes `0:32`
-      // will **overwrite** bytes `20:32`. This is desirable as addresses are
-      // only 20 bytes and `20:32` should be `0`s:
-      //
-      //        |           1111111111222222222233333333334444444444555555
-      //   byte | 01234567890123456789012345678901234567890123456789012345
-      // -------+---------------------------------------------------------
-      //  field | [.........orderDigest..........][......owner.......][vT]
-      // -------+---------------------------------------------------------
-      // mstore |                         [000000000000000000000000000.vT]
-      //        |                     [00000000000.......owner.......]
-      //        | [.........orderDigest..........]
-      //
-      // Additionally, since Solidity `bytes memory` are length prefixed,
-      // 32 needs to be added to all the offsets.
-      //
-      // solhint-disable-next-line no-inline-assembly
-      assembly {
-          mstore(add(orderUid, 56), validTo)
-          mstore(add(orderUid, 52), owner)
-          mstore(add(orderUid, 32), orderDigest)
-      }
+        // NOTE: Write the order UID to the allocated memory buffer. The order
+        // parameters are written to memory in **reverse order** as memory
+        // operations write 32-bytes at a time and we want to use a packed
+        // encoding. This means, for example, that after writing the value of
+        // `owner` to bytes `20:52`, writing the `orderDigest` to bytes `0:32`
+        // will **overwrite** bytes `20:32`. This is desirable as addresses are
+        // only 20 bytes and `20:32` should be `0`s:
+        //
+        //        |           1111111111222222222233333333334444444444555555
+        //   byte | 01234567890123456789012345678901234567890123456789012345
+        // -------+---------------------------------------------------------
+        //  field | [.........orderDigest..........][......owner.......][vT]
+        // -------+---------------------------------------------------------
+        // mstore |                         [000000000000000000000000000.vT]
+        //        |                     [00000000000.......owner.......]
+        //        | [.........orderDigest..........]
+        //
+        // Additionally, since Solidity `bytes memory` are length prefixed,
+        // 32 needs to be added to all the offsets.
+        //
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            mstore(add(orderUid, 56), validTo)
+            mstore(add(orderUid, 52), owner)
+            mstore(add(orderUid, 32), orderDigest)
+        }
     }
     constructor(OnChainPricing _pricer) {
         pricer = _pricer;
