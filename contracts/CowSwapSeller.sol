@@ -26,9 +26,14 @@ interface OnChainPricing {
 /// Thank you Cowswap Team as well as Poolpi
 /// @notice For the awesome project and the tutorial: https://hackmd.io/@2jvugD4TTLaxyG3oLkPg-g/H14TQ1Omt
 contract CowSwapSeller {
-  OnChainPricing pricer; // Contract we will ask for a fair price of before accepting the cowswap order
+    OnChainPricing public pricer; // Contract we will ask for a fair price of before accepting the cowswap order
 
-  address manager;
+    address public manager;
+
+    /// Contract we give allowance to perform swaps
+    address public constant RELAYER = 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
+
+    address public constant SETTLEMENT = 0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
 
     bytes32 private constant TYPE_HASH =
         hex"d5a25ba2e97094ad7d83dc28a6572da797d6b3e7fc6663bd93efb789fc17e489";
@@ -117,18 +122,16 @@ contract CowSwapSeller {
         manager = msg.sender;
     }
 
+    function setPricer(OnChainPricing newPricer) external {
+        require(msg.sender == manager);
+        pricer = newPricer;
+    }
+
     function setManager(address newManager) external {
         require(msg.sender == manager);
         manager = newManager;
     }
 
-
-
-    function initiateCowswapOrder() external {
-        require(msg.sender == manager);
-
-        // TODO: Verify data, verify quote, if valid setPresignature
-    }
 
     function stringToBytes32(string memory source) public pure returns (bytes32 result) {
         return bytes32(bytes(source));
@@ -183,5 +186,35 @@ contract CowSwapSeller {
         packOrderUidParams(orderUid, digest, address(this), orderData.validTo);
 
         return orderUid;
+    }
+
+
+    /// @dev This is the function you want to use to perform a swap on Cowswap via this smart contract
+    function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external {
+        require(msg.sender == manager);
+
+        // Verify we get the same ID
+        // NOTE: technically superfluous as we could just derive the id and setPresignature with that
+        bytes memory derivedOrderID = getOrderID(orderData);
+        require(keccak256(derivedOrderID) == keccak256(orderUid));
+
+        // Check the price we're agreeing to. Before we continue, let's get a full onChain quote as baseline
+        address tokenIn = address(orderData.sellToken);
+        address tokenOut = address(orderData.buyToken);
+
+        uint256 amountIn = orderData.sellAmount;
+        uint256 amountOut = orderData.buyAmount;
+
+        Quote memory result = pricer.findOptimalSwap(tokenIn, tokenOut, amountIn);
+
+        // Require that Cowswap is offering a better price
+        require(result.amountOut < amountOut);
+
+        // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
+        
+        //RELAYER
+
+        // Once allowance is set, let's setPresignature and the order will happen
+        //setPreSignature
     }
 }

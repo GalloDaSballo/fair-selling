@@ -86,6 +86,7 @@ contract OnChainPricingMainnet {
 
 
         // TODO: Consider doing check before revert to avoid paying extra gas
+        // Specifically, test gas if we get revert vs if we check to avoid it
         try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
             quote = amounts[amounts.length - 1]; // Last one is the outToken
         } catch (bytes memory) {
