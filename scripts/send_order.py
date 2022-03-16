@@ -24,6 +24,7 @@ def cowswap_sell(contract, sell_token, buy_token, amount_in, dev):
     amount = amount_in
     
     # get the fee + the buy amount after fee
+    ## TODO: Refactor to new, better endpoint: https://discord.com/channels/869166959739170836/935460632818516048/953702376345309254
     fee_and_quote = "https://protocol-mainnet.gnosis.io/api/v1/feeAndQuote/sell"
     get_params = {
         "sellToken": sell_token.address,
@@ -83,15 +84,15 @@ def cowswap_sell(contract, sell_token, buy_token, amount_in, dev):
         sell_token.address, 
         buy_token.address, 
         contract.address, 
-        str(amount-fee_amount),
-        str(buy_amount_after_fee),
+        amount-fee_amount,
+        buy_amount_after_fee,
         deadline,
         "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24",
-        str(fee_amount),
-        to_bytes32("sell"),
+        fee_amount,
+        contract.KIND_SELL(),
         False,
-        to_bytes32("erc20"),
-        to_bytes32("erc20")
+        contract.BALANCE_ERC20(),
+        contract.BALANCE_ERC20()
     ]
 
     hashFromContract = contract.getHash(order_data, contract.domainSeparator())
@@ -108,7 +109,3 @@ def connect_account():
     dev = accounts.load(click.prompt("Account", type=click.Choice(accounts.load())))
     click.echo(f"You are using: 'dev' [{dev.address}]")
     return dev
-
-
-def to_bytes32(value):
-    return web3.toHex(text=value)[::-1].zfill(34)[::-1]

@@ -30,21 +30,15 @@ contract CowSwapSeller {
 
   address manager;
 
-  /// @dev The EIP-712 domain type hash used for computing the domain
-  /// separator.
-  bytes32 private constant DOMAIN_TYPE_HASH =
-      keccak256(
-          "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-      );
-
-  /// @dev The EIP-712 domain name used for computing the domain separator.
-  bytes32 private constant DOMAIN_NAME = keccak256("Gnosis Protocol");
-
-  /// @dev The EIP-712 domain version used for computing the domain separator.
-  bytes32 private constant DOMAIN_VERSION = keccak256("v2");
-
   bytes32 private constant TYPE_HASH =
         hex"d5a25ba2e97094ad7d83dc28a6572da797d6b3e7fc6663bd93efb789fc17e489";
+
+    // keccak256("sell")
+    bytes32 public constant KIND_SELL =
+        hex"f3b277728b3fee749481eb3e0b3b48980dbbab78658fc419025cb16eee346775";
+    // keccak256("erc20")
+    bytes32 public constant BALANCE_ERC20 =
+        hex"5a28e9363bb942b639270062aa6bb295f434bcdfc42c97267bf003f272060dc9";
 
   /// @dev The domain separator used for signing orders that gets mixed in
   /// making signatures for different domains incompatible. This domain
@@ -55,28 +49,6 @@ contract CowSwapSeller {
   bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
     // Cowswap Order Data Interface 
   uint256 constant UID_LENGTH = 56;
-      /// @dev The order EIP-712 type hash for the [`GPv2Order.Data`] struct.
-    ///
-    /// This value is pre-computed from the following expression:
-    /// ```
-    /// keccak256(
-    ///     "Order(" +
-    ///         "address sellToken," +
-    ///         "address buyToken," +
-    ///         "address receiver," +
-    ///         "uint256 sellAmount," +
-    ///         "uint256 buyAmount," +
-    ///         "uint32 validTo," +
-    ///         "bytes32 appData," +
-    ///         "uint256 feeAmount," +
-    ///         "string kind," +
-    ///         "bool partiallyFillable" +
-    ///         "string sellTokenBalance" +
-    ///         "string buyTokenBalance" +
-    ///     ")"
-    /// )
-    /// ```
-
 
   struct Data {
       IERC20 sellToken;
@@ -92,9 +64,6 @@ contract CowSwapSeller {
       bytes32 sellTokenBalance;
       bytes32 buyTokenBalance;
   }
-
-
-
     
 
   /// @dev Packs order UID parameters into the specified memory location. The
@@ -142,22 +111,24 @@ contract CowSwapSeller {
           mstore(add(orderUid, 52), owner)
           mstore(add(orderUid, 32), orderDigest)
       }
-  }
-  constructor(OnChainPricing _pricer) {
-    pricer = _pricer;
-    manager = msg.sender;
-  }
+    }
+    constructor(OnChainPricing _pricer) {
+        pricer = _pricer;
+        manager = msg.sender;
+    }
 
-  function setManager(address newManager) external {
-    require(msg.sender == manager);
-    manager = newManager;
-  }
+    function setManager(address newManager) external {
+        require(msg.sender == manager);
+        manager = newManager;
+    }
 
 
 
-  function initiateCowswapOrder() external {
-    require(msg.sender == manager);
-  }
+    function initiateCowswapOrder() external {
+        require(msg.sender == manager);
+
+        // TODO: Verify data, verify quote, if valid setPresignature
+    }
 
     function stringToBytes32(string memory source) public pure returns (bytes32 result) {
         return bytes32(bytes(source));
@@ -203,14 +174,14 @@ contract CowSwapSeller {
         }
     }
 
-  function getOrderID(Data calldata orderData) public view returns (bytes memory) {
-    // Allocated
-    bytes memory orderUid = new bytes(UID_LENGTH);
+    function getOrderID(Data calldata orderData) public view returns (bytes memory) {
+        // Allocated
+        bytes memory orderUid = new bytes(UID_LENGTH);
 
-    // Get the hash
-    bytes32 digest = getHash(orderData, domainSeparator);
-    packOrderUidParams(orderUid, digest, address(this), orderData.validTo);
+        // Get the hash
+        bytes32 digest = getHash(orderData, domainSeparator);
+        packOrderUidParams(orderUid, digest, address(this), orderData.validTo);
 
-    return orderUid;
-  }
+        return orderUid;
+    }
 }
