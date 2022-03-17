@@ -27,7 +27,7 @@ interface OnChainPricing {
 /// @notice CREDIS
 /// Thank you Cowswap Team as well as Poolpi
 /// @notice For the awesome project and the tutorial: https://hackmd.io/@2jvugD4TTLaxyG3oLkPg-g/H14TQ1Omt
-contract CowSwapSeller is ReentrancyGuard {
+contract CowSwapDemoSeller is ReentrancyGuard {
     using SafeERC20 for IERC20;
     OnChainPricing public pricer; // Contract we will ask for a fair price of before accepting the cowswap order
 
@@ -229,23 +229,18 @@ contract CowSwapSeller is ReentrancyGuard {
         SETTLEMENT.setPreSignature(orderUid, true);
     }
 
+    function sendTokenBack(IERC20 token) external nonReentrant {
+        require(msg.sender == manager);
+
+        token.safeApprove(RELAYER, 0); // Remove approval in case we had pending order
+        token.safeTransfer(manager, token.balanceOf(address(this)));
+    }
+
     /// @dev Allows to cancel a cowswap order perhaps if it took too long or was with invalid parameters
     /// @notice This function performs no checks, there's a high change it will revert if you send it with fluff parameters
     function cancelCowswapOrder(bytes memory orderUid) external nonReentrant {
         require(msg.sender == manager);
 
         SETTLEMENT.setPreSignature(orderUid, false);
-    }
-
-    function sendToTree(address token) external {
-        // Emits all tokens directly to tree for people to use
-
-        // TODO: In order to avoid selling after, set back the allowance to 0
-    }
-
-    function wrapAndSendToTree(address sett) external {
-        // Take all the settUnderlying and sends them to the badgerTree
-
-        // TODO: In order to avoid selling after, set back the allowance to 0
     }
 }

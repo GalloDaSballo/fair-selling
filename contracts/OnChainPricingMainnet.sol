@@ -13,6 +13,7 @@ import "../interfaces/curve/ICurveRouter.sol";
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
 /// @notice To spin a variant, just change the constants and use the Component Functions at the end of the file
+/// @notice Instead of upgrading in the future, just point to a new implementation
 contract OnChainPricingMainnet {
     
     // Assumption #1 Most tokens liquid pair is WETH (WETH is tokenized ETH for that chain)
@@ -38,7 +39,7 @@ contract OnChainPricingMainnet {
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory) {
         uint256 length = 3; // Add length you need
 
-        Quote[] memory quotes = new Quote[](length); 
+        Quote[] memory quotes = new Quote[](length);
 
         uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
         quotes[0] = Quote("curve", curveQuote);
