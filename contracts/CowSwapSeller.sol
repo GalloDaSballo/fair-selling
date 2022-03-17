@@ -4,10 +4,12 @@ pragma solidity 0.8.10;
 
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "@oz/security/ReentrancyGuard.sol";
 
 
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
+import "../interfaces/cowswap/ICowSettlement.sol";
 
 // Onchain Pricing Interface
 struct Quote {
@@ -15,7 +17,7 @@ struct Quote {
     uint256 amountOut;
 }
 interface OnChainPricing {
-  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
+  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
 }
 // END OnchainPricing
 
@@ -25,7 +27,8 @@ interface OnChainPricing {
 /// @notice CREDIS
 /// Thank you Cowswap Team as well as Poolpi
 /// @notice For the awesome project and the tutorial: https://hackmd.io/@2jvugD4TTLaxyG3oLkPg-g/H14TQ1Omt
-contract CowSwapSeller {
+contract CowSwapSeller is ReentrancyGuard {
+    using SafeERC20 for IERC20;
     OnChainPricing public pricer; // Contract we will ask for a fair price of before accepting the cowswap order
 
     address public manager;
@@ -33,7 +36,7 @@ contract CowSwapSeller {
     /// Contract we give allowance to perform swaps
     address public constant RELAYER = 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
 
-    address public constant SETTLEMENT = 0x9008D19f58AAbD9eD0D60971565AA8510560ab41;
+    ICowSettlement public constant SETTLEMENT = ICowSettlement(0x9008D19f58AAbD9eD0D60971565AA8510560ab41);
 
     bytes32 private constant TYPE_HASH =
         hex"d5a25ba2e97094ad7d83dc28a6572da797d6b3e7fc6663bd93efb789fc17e489";
@@ -188,15 +191,14 @@ contract CowSwapSeller {
         return orderUid;
     }
 
-
-    /// @dev This is the function you want to use to perform a swap on Cowswap via this smart contract
-    function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external {
-        require(msg.sender == manager);
-
+    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public view returns(bool) {
         // Verify we get the same ID
         // NOTE: technically superfluous as we could just derive the id and setPresignature with that
+        // But nice for internal testing
         bytes memory derivedOrderID = getOrderID(orderData);
         require(keccak256(derivedOrderID) == keccak256(orderUid));
+
+        // TODO: Check order is not expired
 
         // Check the price we're agreeing to. Before we continue, let's get a full onChain quote as baseline
         address tokenIn = address(orderData.sellToken);
@@ -207,14 +209,46 @@ contract CowSwapSeller {
 
         Quote memory result = pricer.findOptimalSwap(tokenIn, tokenOut, amountIn);
 
-        // Require that Cowswap is offering a better price
-        require(result.amountOut < amountOut);
+        // Require that Cowswap is offering a better price or matching
+        return(result.amountOut <= amountOut);
+    }
+
+
+    /// @dev This is the function you want to use to perform a swap on Cowswap via this smart contract
+    function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external nonReentrant {
+        require(msg.sender == manager);
+
+        // TODO: At this stage limit the order to
+
+
+        require(checkCowswapOrder(orderData, orderUid));
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
-        
-        //RELAYER
+        orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
+        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount);
 
         // Once allowance is set, let's setPresignature and the order will happen
         //setPreSignature
+        SETTLEMENT.setPreSignature(orderUid, true);
+    }
+
+    /// @dev Allows to cancel a cowswap order perhaps if it took too long or was with invalid parameters
+    /// @notice This function performs no checks, there's a high change it will revert if you send it with fluff parameters
+    function cancelCowswapOrder(bytes memory orderUid) external nonReentrant {
+        require(msg.sender == manager);
+
+        SETTLEMENT.setPreSignature(orderUid, false);
+    }
+
+    function sendToTree(address token) external {
+        // Emits all tokens directly to tree for people to use
+
+        // TODO: In order to avoid selling after, set back the allowance to 0
+    }
+
+    function wrapAndSendToTree(address sett) external {
+        // Take all the settUnderlying and sends them to the badgerTree
+
+        // TODO: In order to avoid selling after, set back the allowance to 0
     }
 }

@@ -35,7 +35,7 @@ contract OnChainPricingMainnet {
     }
 
     /// @dev View function for testing the routing of the strategy
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory) {
         uint256 length = 3; // Add length you need
 
         Quote[] memory quotes = new Quote[](length); 
