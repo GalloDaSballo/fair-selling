@@ -7,9 +7,9 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@oz/security/ReentrancyGuard.sol";
 
 
-import "../interfaces/uniswap/IUniswapRouterV2.sol";
-import "../interfaces/curve/ICurveRouter.sol";
-import "../interfaces/cowswap/ICowSettlement.sol";
+import "../../interfaces/uniswap/IUniswapRouterV2.sol";
+import "../../interfaces/curve/ICurveRouter.sol";
+import "../../interfaces/cowswap/ICowSettlement.sol";
 
 // Onchain Pricing Interface
 struct Quote {
