@@ -120,8 +120,8 @@ contract CowSwapSeller is ReentrancyGuard {
             mstore(add(orderUid, 32), orderDigest)
         }
     }
-    constructor(OnChainPricing _pricer) {
-        pricer = _pricer;
+    constructor(address _pricer) {
+        pricer = OnChainPricing(_pricer);
         manager = msg.sender;
     }
 
@@ -133,11 +133,6 @@ contract CowSwapSeller is ReentrancyGuard {
     function setManager(address newManager) external {
         require(msg.sender == manager);
         manager = newManager;
-    }
-
-
-    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
-        return bytes32(bytes(source));
     }
 
     /// @dev Return the EIP-712 signing hash for the specified order.
@@ -237,15 +232,7 @@ contract CowSwapSeller is ReentrancyGuard {
         SETTLEMENT.setPreSignature(orderUid, false);
     }
 
-    function sendToTree(address token) external {
-        // Emits all tokens directly to tree for people to use
+    // Once Bribes are sold for CVX, checkpoint the amounts
 
-        // TODO: In order to avoid selling after, set back the allowance to 0
-    }
-
-    function wrapAndSendToTree(address sett) external {
-        // Take all the settUnderlying and sends them to the badgerTree
-
-        // TODO: In order to avoid selling after, set back the allowance to 0
-    }
+    // Order to sell CVX -> BADGER will
 }

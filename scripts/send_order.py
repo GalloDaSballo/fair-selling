@@ -31,7 +31,7 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
 
     # get the fee + the buy amount after fee
     ## TODO: Refactor to new, better endpoint: https://discord.com/channels/869166959739170836/935460632818516048/953702376345309254
-    fee_and_quote = "https://protocol-mainnet.gnosis.io/api/v1/feeAndQuote/sell"
+    fee_and_quote = "https://api.cow.fi/mainnet/api/v1/feeAndQuote/sell"
     get_params = {
         "sellToken": sell_token.address,
         "buyToken": buy_token.address,
@@ -66,7 +66,7 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
         "buyTokenBalance": "erc20",
         "signingScheme": "presign" # Very important. this tells the api you are going to sign on chain
     }
-    orders_url = f"https://protocol-mainnet.gnosis.io/api/v1/orders"
+    orders_url = f"https://api.cow.fi/mainnet/api/v1/orders"
     r = requests.post(orders_url, json=order_payload)
     assert r.ok and r.status_code == 201
     order_uid = r.json()
@@ -114,7 +114,7 @@ def cowswap_sell_demo(contract, sell_token, buy_token, amount_in):
     
     # get the fee + the buy amount after fee
     ## TODO: Refactor to new, better endpoint: https://discord.com/channels/869166959739170836/935460632818516048/953702376345309254
-    fee_and_quote = "https://protocol-mainnet.gnosis.io/api/v1/feeAndQuote/sell"
+    fee_and_quote = "https://api.cow.fi/mainnet/api/v1/feeAndQuote/sell"
     get_params = {
         "sellToken": sell_token.address,
         "buyToken": buy_token.address,
@@ -150,7 +150,7 @@ def cowswap_sell_demo(contract, sell_token, buy_token, amount_in):
         "buyTokenBalance": "erc20",
         "signingScheme": "presign" # Very important. this tells the api you are going to sign on chain
     }
-    orders_url = f"https://protocol-mainnet.gnosis.io/api/v1/orders"
+    orders_url = f"https://api.cow.fi/mainnet/api/v1/orders"
     r = requests.post(orders_url, json=order_payload)
     assert r.ok and r.status_code == 201
     order_uid = r.json()
