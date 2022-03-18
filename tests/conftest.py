@@ -16,7 +16,7 @@ def pricer():
 
 @pytest.fixture
 def seller(pricer):
-  return CowSwapSeller.deploy(pricer, {"from": a[0]})
+  return CowSwapDemoSeller.deploy(pricer, {"from": a[0]})
 
 @pytest.fixture
 def usdc():

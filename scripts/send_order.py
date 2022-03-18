@@ -14,7 +14,7 @@ USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 def main():
     pricer = OnChainPricingMainnet.deploy({"from": a[0]})
 
-    c = CowSwapSeller.deploy(pricer, {"from": a[0]})
+    c = CowSwapDemoSeller.deploy(pricer, {"from": a[0]})
 
     usdc = interface.ERC20(USDC)
     weth = interface.ERC20(WETH)

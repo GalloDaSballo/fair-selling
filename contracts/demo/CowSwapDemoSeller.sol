@@ -12,6 +12,14 @@ contract CowSwapDemoSeller is CowSwapSeller {
 
     constructor(address _pricer) CowSwapSeller(_pricer) {}
 
+    function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external {
+        _doCowswapOrder(orderData, orderUid);
+    }
+
+
+    function cancelCowswapOrder(bytes memory orderUid) external {
+        _cancelCowswapOrder(orderUid);
+    }
 
     function sendTokenBack(IERC20 token) external nonReentrant {
         require(msg.sender == manager);

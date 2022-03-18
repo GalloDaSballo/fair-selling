@@ -24,7 +24,7 @@ interface OnChainPricing {
 /// @title CowSwapSeller
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev Cowswap seller, a smart contract that receives order data and verifies if the order is worth going for
-/// @notice CREDIS
+/// @notice CREDITS
 /// Thank you Cowswap Team as well as Poolpi
 /// @notice For the awesome project and the tutorial: https://hackmd.io/@2jvugD4TTLaxyG3oLkPg-g/H14TQ1Omt
 contract CowSwapSeller is ReentrancyGuard {
@@ -186,7 +186,7 @@ contract CowSwapSeller is ReentrancyGuard {
         return orderUid;
     }
 
-    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public view returns(bool) {
+    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual view returns(bool) {
         // Verify we get the same ID
         // NOTE: technically superfluous as we could just derive the id and setPresignature with that
         // But nice for internal testing
@@ -210,7 +210,7 @@ contract CowSwapSeller is ReentrancyGuard {
 
 
     /// @dev This is the function you want to use to perform a swap on Cowswap via this smart contract
-    function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external nonReentrant {
+    function _doCowswapOrder(Data calldata orderData, bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
         require(checkCowswapOrder(orderData, orderUid));
@@ -226,13 +226,9 @@ contract CowSwapSeller is ReentrancyGuard {
 
     /// @dev Allows to cancel a cowswap order perhaps if it took too long or was with invalid parameters
     /// @notice This function performs no checks, there's a high change it will revert if you send it with fluff parameters
-    function cancelCowswapOrder(bytes memory orderUid) external nonReentrant {
+    function _cancelCowswapOrder(bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
         SETTLEMENT.setPreSignature(orderUid, false);
     }
-
-    // Once Bribes are sold for CVX, checkpoint the amounts
-
-    // Order to sell CVX -> BADGER will
 }
