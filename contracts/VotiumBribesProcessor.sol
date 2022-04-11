@@ -7,12 +7,16 @@ import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 
+// TODO: https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py#L39
+// TODO: https://miro.com/app/board/uXjVO9yyd7o=/
+
+
 /// @title BribesProcessor
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev BribesProcess for bveCVX, using CowSwapSeller allows to process bribes fairly
 /// Minimizing the amount of power that the manager can have
 /// @notice This code is WIP, any feedback is appreciated alex@badger.finance
-contract BVECVXBribesProcessor is CowSwapSeller {
+contract VotiumBribesProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
 
@@ -114,9 +118,14 @@ contract BVECVXBribesProcessor is CowSwapSeller {
         _doCowswapOrder(orderData, orderUid);
     }
 
+    function sellBribesForCVXOnChain() external {
+        // TODO: Allows to sell onChain without using cowswap
+        // NOTE: This probably can be rekted so ideally should be minimized
+    }
+
 
     /// Step 2
-    /// Once done selling bribs, mark the CVX for Fee Calculation
+    /// Once done selling bribes, mark the CVX for Fee Calculation
     function markCVXForThisRound() external {
         require(msg.sender == manager);
 
@@ -159,6 +168,7 @@ contract BVECVXBribesProcessor is CowSwapSeller {
 
         // Because CVX / bveCVX is an onChain Pool, we either swap or wrap, fully onChain here
         // No need for cowswap quote
+        // Either Buy via Swap or Lock
 
         lastManagerAction = block.timestamp;
     }
