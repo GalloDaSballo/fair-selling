@@ -62,12 +62,12 @@ contract VotiumBribesProcessor is CowSwapSeller {
     address public constant DEV_MULTI = 0xB65cef03b9B89f99517643226d76e286ee999e77;
 
 
-    address public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
+    ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
 
-    function notifyNewRound() {
+    function notifyNewRound() external {
         require(msg.sender == STRATEGY);
 
         // Give the manager 28 days to process else anyone can claim
@@ -119,7 +119,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     }
 
     /// Step 2.a
-    function swapWethForBadger() {
+    function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == BADGER);
 
@@ -128,7 +128,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     }
 
     /// Step 2.b
-    function swapWethForCVX() {
+    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == CVX);
 
@@ -150,7 +150,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // TODO: Get quote from pool
 
         //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
-        uint256 ops_fee = total * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+        uint256 ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
         uint256 toEmit = totalCVX - ops_fee;
         
@@ -165,7 +165,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function emitBadger() external {
         // Sends Badger to the Tree
         // Emits custom event for it
-        uint256 toEmit = BADGER_TREE.balanceOf(address(this));
+        uint256 toEmit = BADGER.balanceOf(address(this));
         require(toEmit > 0);
 
         BADGER.safeTransfer(BADGER_TREE, toEmit);
