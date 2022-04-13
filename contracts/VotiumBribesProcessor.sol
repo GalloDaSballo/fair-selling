@@ -106,6 +106,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     /// === Day to Day Operations Functions === ///
 
+    /// @dev
     /// Step 1 
     /// Use sellBribeForWETH
     /// To sell all bribes to WETH
@@ -118,7 +119,9 @@ contract VotiumBribesProcessor is CowSwapSeller {
         _doCowswapOrder(orderData, orderUid);
     }
 
+    /// @dev
     /// Step 2.a
+    /// Swap WETH -> BADGER
     function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == BADGER);
@@ -127,7 +130,9 @@ contract VotiumBribesProcessor is CowSwapSeller {
         _doCowswapOrder(orderData, orderUid);
     }
 
+    /// @dev
     /// Step 2.b
+    /// Swap WETH -> CVX
     function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == CVX);
@@ -136,6 +141,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         _doCowswapOrder(orderData, orderUid);
     }
 
+    /// @dev
     /// Step 3 Emit the CVX
     /// Takes all the CVX, takes fee, locks and emits it
     function swapCVXTobveCVXAndEmit() external {
@@ -161,6 +167,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // TODO: Custom event or callback to emit for Tree
     }
 
+    /// @dev
     /// Step 4 Emit the Badger
     function emitBadger() external {
         // Sends Badger to the Tree
