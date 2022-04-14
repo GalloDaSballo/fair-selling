@@ -161,7 +161,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         require(totalCVX > 0);
 
         // Get quote from pool
-        uint256 fromPurchase = CVX_BVE_CVX_CURVE.calc_token_amount([totalCVX, 0], false);
+        uint256 fromPurchase = CVX_BVE_CVX_CURVE.get_dy(0, 1, totalCVX);
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
