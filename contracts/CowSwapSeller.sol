@@ -195,7 +195,7 @@ contract CowSwapSeller is ReentrancyGuard {
 
         require(orderData.validTo > block.timestamp);
         require(orderData.receiver == address(this));
-        require(orderData.kind == KIND_SELL);
+        require(keccak256(abi.encodePacked(orderData.kind)) == keccak256(abi.encodePacked(KIND_SELL)));
 
         // TODO: This should be done by using a gas cost oracle (see Chainlink)
         require(orderData.feeAmount <= orderData.sellAmount / 10); // Fee can be at most 1/10th of order
