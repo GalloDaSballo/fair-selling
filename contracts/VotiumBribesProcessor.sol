@@ -26,9 +26,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
 
-    event SentBadgerToTree(address indexed token, uint256 amount);
-    event SentBveCVXToTree(address indexed token, uint256 amount);
-
     event TreeDistribution(
         address indexed token,
         uint256 amount,
