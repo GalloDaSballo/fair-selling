@@ -45,7 +45,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     // Once BadgerRewards is live we will integrate it
     uint256 public lastBribeAction;
 
-    uint256 public constant MAX_MANAGER_IDLE_TIME = 28 days; // 14 days per bribes + 14 days for processing
+    uint256 public constant MAX_MANAGER_IDLE_TIME = 14 days; // Because we have Strategy Notify, 14 days is enough
     // Way more time than expected
 
     IERC20 public constant BADGER = IERC20(0x3472A5A71965499acd81997a54BBA8D852C6E53d);
@@ -91,7 +91,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// The manager can call it to move funds to tree (forfeiting any fees)
     /// And anyone can rescue the funds if the manager goes rogue
     function ragequit(IERC20 token, bool sendToGovernance) external nonReentrant {
-        require(msg.sender == manager || block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME);
+        bool timeHasExpired = block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME;
+        require(msg.sender == manager || timeHasExpired);
 
         // TODO: In order to avoid selling after, set back the allowance to 0
         token.safeApprove(address(SETTLEMENT), 0);
@@ -104,6 +105,17 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             emit SentBribeToGovernance(address(token), amount);
         } else {
+            
+            // If manager rqs to emit in time, treasury still receives a fee
+            if(timeHasExpired && msg.sender == manager) {
+                // Take a fee here
+
+                uint256 fee = amount * OPS_FEE / MAX_BPS;
+                token.safeTransfer(TREASURY, fee);
+
+                amount -= fee;
+            }
+
             token.safeTransfer(BADGER_TREE, amount);
 
             emit SentBribeToTree(address(token), amount);
@@ -118,9 +130,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Use sellBribeForWETH
     /// To sell all bribes to WETH
     /// @notice nonReentrant not needed as `_doCowswapOrder` is nonReentrant
-    function sellBribeForWeth(Data calldata orderData, bytes memory orderUid) external nonReentrant {
+    function sellBribeForWeth(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken != CVX); // Can't sell CVX;
         require(orderData.sellToken != BADGER); // Can't sell BADGER either;
+        require(orderData.sellToken != WETH); // Can't sell WETH
         require(orderData.buyToken == WETH); // Gotta Buy WETH;
 
         _doCowswapOrder(orderData, orderUid);
@@ -129,7 +142,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 2.a
     /// Swap WETH -> BADGER
-    function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external nonReentrant {
+    function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == BADGER);
 
@@ -140,7 +153,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 2.b
     /// Swap WETH -> CVX
-    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external nonReentrant {
+    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == CVX);
 
