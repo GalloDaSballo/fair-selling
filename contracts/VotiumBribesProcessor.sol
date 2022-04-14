@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 
+import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
@@ -67,6 +68,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
 
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
+    ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
     
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
@@ -158,19 +160,44 @@ contract VotiumBribesProcessor is CowSwapSeller {
         uint256 totalCVX = CVX.balanceOf(address(this));
         require(totalCVX > 0);
 
-        // TODO: Get quote from pool
+        // Get quote from pool
+        uint256 fromPurchase = CVX_BVE_CVX_CURVE.calc_token_amount([totalCVX, 0], false);
 
-        //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
-        uint256 ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+        // Check math from vault
+        // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
+        uint256 fromDeposit = totalCVX * BVE_CVX.totalSupply() / BVE_CVX.balance();
 
-        uint256 toEmit = totalCVX - ops_fee;
+        if(fromDeposit > fromPurchase) {
+            // Costs less to deposit
+
+            //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
+            uint256 ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+
+            uint256 toEmit = totalCVX - ops_fee;
         
-        // If we don't swap
-        BVE_CVX.depositFor(TREASURY, ops_fee);
-        BVE_CVX.depositFor(BADGER_TREE, toEmit);
+            // If we don't swap
+            BVE_CVX.depositFor(TREASURY, ops_fee);
+            BVE_CVX.depositFor(BADGER_TREE, toEmit);
 
-        emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+            emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+        } else {
+            // Buy from pool
 
+            CVX.safeApprove(address(CVX_BVE_CVX_CURVE), totalCVX);
+
+            // fromPurchase is calculated in same call so provides no slippage protection
+            // but we already calculated it so may as well use that
+            uint256 totalBveCVX = CVX_BVE_CVX_CURVE.exchange(0, 1, totalCVX, fromPurchase);
+
+            uint256 ops_fee = totalBveCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+
+            uint256 toEmit = totalBveCVX - ops_fee;
+
+            IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
+            IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
+
+            emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+        }
     }
 
     /// @dev
