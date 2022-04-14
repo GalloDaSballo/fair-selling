@@ -25,9 +25,16 @@ contract VotiumBribesProcessor is CowSwapSeller {
     // TODO: Ask Jintao if it helps or if we can remove extra address
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
+
     event SentBadgerToTree(address indexed token, uint256 amount);
-    event SentBadgerLiquidityFeeToTree(address indexed token, uint256 amount);
-    event SentCVXFeeToTreasury(address indexed token, uint256 amount);
+    event SentBveCVXToTree(address indexed token, uint256 amount);
+
+    event TreeDistribution(
+        address indexed token,
+        uint256 amount,
+        uint256 indexed blockNumber,
+        uint256 timestamp
+    );
 
     // TODO: Bring the following script to onChain
     // https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py
@@ -101,6 +108,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
             token.safeTransfer(BADGER_TREE, amount);
 
             emit SentBribeToTree(address(token), amount);
+            emit TreeDistribution(address(token), amount, block.number, block.timestamp);
         }
     }
 
@@ -111,7 +119,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Use sellBribeForWETH
     /// To sell all bribes to WETH
     /// @notice nonReentrant not needed as `_doCowswapOrder` is nonReentrant
-    function sellBribeForWeth(Data calldata orderData, bytes memory orderUid) external {
+    function sellBribeForWeth(Data calldata orderData, bytes memory orderUid) external nonReentrant {
         require(orderData.sellToken != CVX); // Can't sell CVX;
         require(orderData.sellToken != BADGER); // Can't sell BADGER either;
         require(orderData.buyToken == WETH); // Gotta Buy WETH;
@@ -122,7 +130,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 2.a
     /// Swap WETH -> BADGER
-    function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
+    function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external nonReentrant {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == BADGER);
 
@@ -133,7 +141,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 2.b
     /// Swap WETH -> CVX
-    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external {
+    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external nonReentrant {
         require(orderData.sellToken == WETH);
         require(orderData.buyToken == CVX);
 
@@ -144,7 +152,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 3 Emit the CVX
     /// Takes all the CVX, takes fee, locks and emits it
-    function swapCVXTobveCVXAndEmit() external {
+    function swapCVXTobveCVXAndEmit() external nonReentrant {
         // Will take all the CVX left, 
         // swap it for bveCVX if cheaper, or deposit it directly 
         // and then emit it
@@ -164,12 +172,13 @@ contract VotiumBribesProcessor is CowSwapSeller {
         BVE_CVX.depositFor(TREASURY, ops_fee);
         BVE_CVX.depositFor(BADGER_TREE, toEmit);
 
-        // TODO: Custom event or callback to emit for Tree
+        emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+
     }
 
     /// @dev
     /// Step 4 Emit the Badger
-    function emitBadger() external {
+    function emitBadger() external nonReentrant {
         // Sends Badger to the Tree
         // Emits custom event for it
         uint256 toEmit = BADGER.balanceOf(address(this));
@@ -177,7 +186,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
         BADGER.safeTransfer(BADGER_TREE, toEmit);
 
-        // TODO: Custom event or callback to emit for Tree
+        emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
     }
 }
 
