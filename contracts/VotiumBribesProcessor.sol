@@ -174,6 +174,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
             uint256 ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
             uint256 toEmit = totalCVX - ops_fee;
+
+            CVX.safeApprove(address(BVE_CVX), totalCVX);
         
             // If we don't swap
             BVE_CVX.depositFor(TREASURY, ops_fee);
