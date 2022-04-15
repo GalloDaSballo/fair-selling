@@ -16,5 +16,7 @@ interface ISettV4 {
 
     function balanceOf(address) external view returns (uint256);
     function totalSupply() external view returns (uint256);
+    function approveContractAccess(address) external;
+    function governance() external view returns (address);
     
 }
