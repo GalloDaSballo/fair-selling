@@ -107,7 +107,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         } else {
             
             // If manager rqs to emit in time, treasury still receives a fee
-            if(timeHasExpired && msg.sender == manager) {
+            if(!timeHasExpired && msg.sender == manager) {
                 // Take a fee here
 
                 uint256 fee = amount * OPS_FEE / MAX_BPS;
