@@ -26,6 +26,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     // TODO: Ask Jintao if it helps or if we can remove extra address
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
+    event PerformanceFeeGovernance(address indexed token, uint256 amount);
 
     event TreeDistribution(
         address indexed token,
@@ -113,6 +114,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
                 uint256 fee = amount * OPS_FEE / MAX_BPS;
                 token.safeTransfer(TREASURY, fee);
 
+                emit PerformanceFeeGovernance(address(token), fee);
+
                 amount -= fee;
             }
 
@@ -194,6 +197,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
             BVE_CVX.depositFor(TREASURY, ops_fee);
             BVE_CVX.depositFor(BADGER_TREE, toEmit);
 
+            emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
             emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
         } else {
             // Buy from pool
@@ -211,6 +215,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
             IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
             IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
 
+            emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
             emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
         }
     }
