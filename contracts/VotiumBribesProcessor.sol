@@ -77,7 +77,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function notifyNewRound() external {
         require(msg.sender == STRATEGY);
 
-        // Give the manager 28 days to process else anyone can claim
+        // Give the manager 14 days to process else anyone can claim
         lastBribeAction = block.timestamp;
     }
 
