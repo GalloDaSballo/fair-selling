@@ -206,8 +206,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
             // Update vars as we emit event with them
             ops_fee = BVE_CVX.balanceOf(TREASURY) - treasuryPrevBalance;
             toEmit = BVE_CVX.balanceOf(BADGER_TREE) - badgerTreePrevBalance;
-
-                     
         } else {
             // Buy from pool
 
