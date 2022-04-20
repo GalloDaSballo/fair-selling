@@ -95,8 +95,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
         bool timeHasExpired = block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME;
         require(msg.sender == manager || timeHasExpired);
 
-        // TODO: In order to avoid selling after, set back the allowance to 0
-        token.safeApprove(address(SETTLEMENT), 0);
+        // TODO: In order to avoid selling after, set back the allowance to 0 to the Relayer
+        token.safeApprove(address(RELAYER), 0);
 
         // Send all tokens to badgerTree without fee
         // TODO: Add fee if manager calls it
