@@ -183,13 +183,16 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
         uint256 fromDeposit = totalCVX * BVE_CVX.totalSupply() / BVE_CVX.balance();
 
+        uint256 ops_fee;
+        uint256 toEmit;
+
         if(fromDeposit > fromPurchase) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
-            uint256 ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+            ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
-            uint256 toEmit = totalCVX - ops_fee;
+            toEmit = totalCVX - ops_fee;
 
             CVX.safeApprove(address(BVE_CVX), totalCVX);
         
@@ -197,8 +200,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
             BVE_CVX.depositFor(TREASURY, ops_fee);
             BVE_CVX.depositFor(BADGER_TREE, toEmit);
 
-            emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
-            emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+            
         } else {
             // Buy from pool
 
@@ -208,16 +210,16 @@ contract VotiumBribesProcessor is CowSwapSeller {
             // but we already calculated it so may as well use that
             uint256 totalBveCVX = CVX_BVE_CVX_CURVE.exchange(0, 1, totalCVX, fromPurchase);
 
-            uint256 ops_fee = totalBveCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+            ops_fee = totalBveCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
-            uint256 toEmit = totalBveCVX - ops_fee;
+            toEmit = totalBveCVX - ops_fee;
 
             IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
             IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
-
-            emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
-            emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
         }
+
+        emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
+        emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
     }
 
     /// @dev
