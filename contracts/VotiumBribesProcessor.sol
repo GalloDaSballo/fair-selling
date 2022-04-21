@@ -46,7 +46,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     // Once BadgerRewards is live we will integrate it
     uint256 public lastBribeAction;
 
-    uint256 public constant MAX_MANAGER_IDLE_TIME = 14 days; // Because we have Strategy Notify, 14 days is enough
+    uint256 public constant MAX_MANAGER_IDLE_TIME = 10 days; // Because we have Strategy Notify, 10 days is enough
     // Way more time than expected
 
     IERC20 public constant BADGER = IERC20(0x3472A5A71965499acd81997a54BBA8D852C6E53d);
@@ -77,7 +77,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function notifyNewRound() external {
         require(msg.sender == STRATEGY);
 
-        // Give the manager 14 days to process else anyone can claim
+        // Give the manager 10 days to process else anyone can claim
         lastBribeAction = block.timestamp;
     }
 
@@ -85,6 +85,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// === Security Function === ///
 
     /// @dev Emits all of token directly to tree for people to receive
+    /// @param token The token to transfer
+    /// @param sendToGovernance Should we send to the dev multisig, or emit directly to the badgerTree?
     /// @notice has built in expiration allowing anyone to send the tokens to tree should the manager stop processing bribes
     ///     can also sendToGovernance if you prefer
     ///     at this time both options have the same level of trust assumptions
