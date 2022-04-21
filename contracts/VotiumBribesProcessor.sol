@@ -127,6 +127,14 @@ contract VotiumBribesProcessor is CowSwapSeller {
         }
     }
 
+    /// === Helper Functions === ///
+
+    function _lastSchedule(address _token) internal view returns (uint256 endingTime) {
+        IRewardsLogger.UnlockSchedule[] memory schedules = REWARDS_LOGGER
+            .getUnlockSchedulesFor(address(BVE_CVX), _token);
+        endingTime = schedules[schedules.length - 1].end;
+    }
+
     /// === Day to Day Operations Functions === ///
 
     /// @dev
@@ -224,10 +232,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
             IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
         }
 
-        // Unlock Schedule
-        uint256 previousEndTime = REWARDS_LOGGER.getUnlockSchedulesFor(
-            address(BVE_CVX), address(BVE_CVX)
-        ); // need final last element from this tuple (of unknown length)
+        // // Unlock Schedule
+        uint256 previousEndTime = _lastSchedule(address(BVE_CVX));
         REWARDS_LOGGER.setUnlockSchedule(
             address(BVE_CVX),
             address(BVE_CVX),
@@ -248,6 +254,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // Sends Badger to the Tree
         // Updates the emissions schedule accordingly
         // Emits custom event for it
+        require(msg.sender == manager);
         uint256 toEmit = BADGER.balanceOf(address(this));
         require(toEmit > 0);
 
@@ -255,9 +262,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
         // Unlock Schedule
         uint256 toEmitToLiqPool = toEmit * LIQ_FEE / BADGER_SHARE;
-        uint256 previousEndTime = REWARDS_LOGGER.getUnlockSchedulesFor(
-            address(BVE_CVX), address(BADGER)
-        ); // need final last element from this tuple (of unknown length)
+        uint256 previousEndTime = _lastSchedule(address(BADGER));
         REWARDS_LOGGER.setUnlockSchedule(
             address(BVE_CVX),
             address(BADGER),
