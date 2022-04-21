@@ -1,4 +1,11 @@
-from brownie import *
+from brownie import (
+  OnChainPricingMainnet,
+  CowSwapDemoSeller,
+  VotiumBribesProcessor,
+  interface,
+  a,
+  accounts
+)
 from rich.console import Console
 import pytest
 
@@ -93,6 +100,10 @@ def cvx(processor):
 @pytest.fixture
 def settlement(processor):
   return interface.ICowSettlement(processor.SETTLEMENT())
+
+@pytest.fixture
+def rewards(processor):
+  return interface.IRewardsLogger(processor.REWARDS_LOGGER())
 
 ## Forces reset before each test
 @pytest.fixture(autouse=True)
