@@ -31,6 +31,8 @@ def test_emit_badger(rewards, setup_processor, manager, badger, bve_cvx):
 
   schedules_length_before = len(rewards.getUnlockSchedulesFor(bve_cvx, badger))
 
+  assert rewards.hasRole(rewards.MANAGER_ROLE(), setup_processor)
+
   setup_processor.emitBadger({"from": manager})
 
   assert badger.balanceOf(setup_processor.BADGER_TREE()) > badger_balance_before

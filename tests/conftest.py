@@ -61,6 +61,10 @@ def manager(seller):
   return accounts.at(seller.manager(), force=True)
 
 @pytest.fixture
+def admin(processor):
+  return accounts.at('0x576cD258835C529B54722F84Bb7d4170aA932C64', force=True)
+
+@pytest.fixture
 def strategy(processor):
   return accounts.at(processor.STRATEGY(), force=True)
 
@@ -69,7 +73,7 @@ def bve_cvx(processor):
   return interface.ERC20(processor.BVE_CVX())
 
 @pytest.fixture
-def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_whale, cvx_whale, bve_cvx):
+def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_whale, cvx_whale, bve_cvx, rewards, admin):
   ## Do the donation / Transfer Bribes
   usdc.transfer(processor, 6e10, {"from": usdc_whale})
 
@@ -81,6 +85,9 @@ def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_w
   ## Also approve contract access from bveCVX
   interface.ISettV4(bve_cvx).approveContractAccess(processor, {"from": accounts.at(interface.ISettV4(bve_cvx).governance(), force=True)})
 
+  ## Give strat permissions to set emissions
+  MANAGER_ROLE = rewards.MANAGER_ROLE()
+  rewards.grantRole(MANAGER_ROLE, processor, {'from': admin})
 
   ## Notify new round, 10 days before anyone can unlock tokens
   processor.notifyNewRound({"from": strategy})

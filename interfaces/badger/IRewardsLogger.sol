@@ -8,7 +8,16 @@ interface IRewardsLogger {
     function getUnlockSchedulesFor(address beneficiary, address token)
         external
         view
-        returns (IRewardsLogger.UnlockSchedule[] memory);
+        returns (UnlockSchedule[] memory);
+
+    function grantRole(bytes32 role, address account) external;
+
+    function hasRole(bytes32 role, address account)
+        external
+        view
+        returns (bool);
+
+    function MANAGER_ROLE() external view returns (bytes32);
 
     function setUnlockSchedule(
         address beneficiary,
