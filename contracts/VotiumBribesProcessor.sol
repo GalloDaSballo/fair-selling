@@ -52,10 +52,12 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     address public constant STRATEGY = 0x898111d1F4eB55025D0036568212425EE2274082;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
+    address public constant CVX_BVE_CVX_SETT = 0x937B8E917d0F36eDEBBA8E459C5FB16F3b315551;
 
     uint256 public constant MAX_BPS = 10_000;
     uint256 public constant BADGER_SHARE = 2750; //27.50%
     uint256 public constant OPS_FEE = 500; // 5%
+    uint256 public constant LIQ_FEE = 500; // 5%
 
     /// `treasury_vault_multisig`
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
@@ -68,7 +70,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
     IRewardsLogger public constant REWARDS_LOGGER = IRewardsLogger(0x0A4F4e92C3334821EbB523324D09E321a6B0d8ec);
-    
+
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
 
@@ -105,7 +107,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             emit SentBribeToGovernance(address(token), amount);
         } else {
-            
+
             // If manager rqs to emit in time, treasury still receives a fee
             if(!timeHasExpired && msg.sender == manager) {
                 // Take a fee here
@@ -128,7 +130,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// === Day to Day Operations Functions === ///
 
     /// @dev
-    /// Step 1 
+    /// Step 1
     /// Use sellBribeForWETH
     /// To sell all bribes to WETH
     /// @notice nonReentrant not needed as `_doCowswapOrder` is nonReentrant
@@ -167,8 +169,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Step 3 Emit the CVX
     /// Takes all the CVX, takes fee, locks and emits it
     function swapCVXTobveCVXAndEmit() external nonReentrant {
-        // Will take all the CVX left, 
-        // swap it for bveCVX if cheaper, or deposit it directly 
+        // Will take all the CVX left,
+        // swap it for bveCVX if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
 
@@ -197,7 +199,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             uint256 treasuryPrevBalance = BVE_CVX.balanceOf(TREASURY);
             uint256 badgerTreePrevBalance = BVE_CVX.balanceOf(BADGER_TREE);
-            
+
             // If we don't swap
             BVE_CVX.depositFor(TREASURY, ops_fee);
             BVE_CVX.depositFor(BADGER_TREE, toEmit);
@@ -223,15 +225,18 @@ contract VotiumBribesProcessor is CowSwapSeller {
         }
 
         // Unlock Schedule
+        uint256 last_end_time = REWARDS_LOGGER.getUnlockSchedulesFor(
+            address(BVE_CVX), address(BVE_CVX)
+        ).length - 2;
         REWARDS_LOGGER.setUnlockSchedule(
-            address(BVE_CVX), 
-            address(BVE_CVX), 
-            toEmit, 
-            block.timestamp, 
-            block.timestamp + 14 days, 
+            address(BVE_CVX),
+            address(BVE_CVX),
+            toEmit,
+            last_end_time,
+            last_end_time + 14 days,
             14 days
         );
-        
+
         // Send event
         emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
         emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
@@ -241,6 +246,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Step 4 Emit the Badger
     function emitBadger() external nonReentrant {
         // Sends Badger to the Tree
+        // Updates the emissions schedule accordingly
         // Emits custom event for it
         uint256 toEmit = BADGER.balanceOf(address(this));
         require(toEmit > 0);
@@ -248,16 +254,27 @@ contract VotiumBribesProcessor is CowSwapSeller {
         BADGER.safeTransfer(BADGER_TREE, toEmit);
 
         // Unlock Schedule
+        uint256 toEmitToLiqPool = toEmit * LIQ_FEE / BADGER_SHARE;
+        uint256 previousEndTime = REWARDS_LOGGER.getUnlockSchedulesFor(
+            address(BVE_CVX), address(BADGER)
+        ); // need final last element from this tuple (of unknown length)
         REWARDS_LOGGER.setUnlockSchedule(
-            address(BVE_CVX), 
-            address(BADGER), 
-            toEmit, 
-            block.timestamp, 
-            block.timestamp + 14 days, 
+            address(BVE_CVX),
+            address(BADGER),
+            toEmitToLiqPool,
+            previousEndTime,
+            previousEndTime + 14 days,
+            14 days
+        );
+        REWARDS_LOGGER.setUnlockSchedule(
+            address(CVX_BVE_CVX_SETT),
+            address(BADGER),
+            toEmit - toEmitToLiqPool,
+            previousEndTime,
+            previousEndTime + 14 days,
             14 days
         );
 
         emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
     }
 }
-

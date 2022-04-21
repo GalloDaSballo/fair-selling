@@ -1,4 +1,3 @@
-from time import time
 from brownie import *
 from rich.console import Console
 import pytest
@@ -76,7 +75,7 @@ def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_w
   interface.ISettV4(bve_cvx).approveContractAccess(processor, {"from": accounts.at(interface.ISettV4(bve_cvx).governance(), force=True)})
 
 
-  ## Notify new round, 28 days before anyone can unlock tokens
+  ## Notify new round, 10 days before anyone can unlock tokens
   processor.notifyNewRound({"from": strategy})
 
   return processor
