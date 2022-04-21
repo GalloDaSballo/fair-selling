@@ -225,15 +225,15 @@ contract VotiumBribesProcessor is CowSwapSeller {
         }
 
         // Unlock Schedule
-        uint256 last_end_time = REWARDS_LOGGER.getUnlockSchedulesFor(
+        uint256 previousEndTime = REWARDS_LOGGER.getUnlockSchedulesFor(
             address(BVE_CVX), address(BVE_CVX)
-        ).length - 2;
+        ); // need final last element from this tuple (of unknown length)
         REWARDS_LOGGER.setUnlockSchedule(
             address(BVE_CVX),
             address(BVE_CVX),
             toEmit,
-            last_end_time,
-            last_end_time + 14 days,
+            previousEndTime,
+            previousEndTime + 14 days,
             14 days
         );
 
