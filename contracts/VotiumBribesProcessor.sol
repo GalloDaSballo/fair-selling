@@ -2,6 +2,7 @@
 pragma solidity 0.8.10;
 
 
+import {IRewardsLogger} from "../interfaces/badger/IRewardsLogger.sol";
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
@@ -66,6 +67,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
+    IRewardsLogger public constant REWARDS_LOGGER = IRewardsLogger(0x0A4F4e92C3334821EbB523324D09E321a6B0d8ec);
     
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
@@ -220,6 +222,17 @@ contract VotiumBribesProcessor is CowSwapSeller {
             IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
         }
 
+        // Unlock Schedule
+        REWARDS_LOGGER.setUnlockSchedule(
+            address(BVE_CVX), 
+            address(BVE_CVX), 
+            toEmit, 
+            block.timestamp, 
+            block.timestamp + 14 days, 
+            14 days
+        );
+        
+        // Send event
         emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
         emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
     }
@@ -233,6 +246,16 @@ contract VotiumBribesProcessor is CowSwapSeller {
         require(toEmit > 0);
 
         BADGER.safeTransfer(BADGER_TREE, toEmit);
+
+        // Unlock Schedule
+        REWARDS_LOGGER.setUnlockSchedule(
+            address(BVE_CVX), 
+            address(BADGER), 
+            toEmit, 
+            block.timestamp, 
+            block.timestamp + 14 days, 
+            14 days
+        );
 
         emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
     }
