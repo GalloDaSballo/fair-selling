@@ -52,7 +52,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     address public constant STRATEGY = 0x898111d1F4eB55025D0036568212425EE2274082;
-    // address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
     address public constant CVX_BVE_CVX_SETT = 0x937B8E917d0F36eDEBBA8E459C5FB16F3b315551;
 
     uint256 public constant MAX_BPS = 10_000;
