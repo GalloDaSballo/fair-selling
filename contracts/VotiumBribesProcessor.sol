@@ -5,6 +5,7 @@ pragma solidity 0.8.10;
 import {IRewardsLogger} from "../interfaces/badger/IRewardsLogger.sol";
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
+import {IBadgerTreeV2} from "../interfaces/badger/IBadgerTreeV2.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
@@ -51,7 +52,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     address public constant STRATEGY = 0x898111d1F4eB55025D0036568212425EE2274082;
-    address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
     address public constant CVX_BVE_CVX_SETT = 0x937B8E917d0F36eDEBBA8E459C5FB16F3b315551;
 
     uint256 public constant MAX_BPS = 10_000;
@@ -70,6 +70,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
     IRewardsLogger public constant REWARDS_LOGGER = IRewardsLogger(0x0A4F4e92C3334821EbB523324D09E321a6B0d8ec);
+    IBadgerTreeV2 public constant BADGER_TREE = IBadgerTreeV2(0x660802Fc641b154aBA66a62137e71f331B6d787A);
 
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
@@ -120,7 +121,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
                 amount -= fee;
             }
 
-            token.safeTransfer(BADGER_TREE, amount);
+            token.safeTransfer(address(BADGER_TREE), amount);
 
             emit SentBribeToTree(address(token), amount);
             emit TreeDistribution(address(token), amount, block.number, block.timestamp);
@@ -129,10 +130,21 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     /// === Helper Functions === ///
 
-    function _lastSchedule(address _token) internal view returns (uint256 endingTime) {
+    function _getScheduleTimes(address _token) internal view returns (
+        uint256 newStartTime, uint256 newEndTime, uint256 duration
+    ) {
         IRewardsLogger.UnlockSchedule[] memory schedules = REWARDS_LOGGER
             .getUnlockSchedulesFor(address(BVE_CVX), _token);
-        endingTime = schedules[schedules.length - 1].end;
+        uint256 lastEndingTime = schedules[schedules.length - 1].end;
+        uint256 minStartTime = BADGER_TREE.lastPublishTimestamp();
+        if(minStartTime + 2 hours > lastEndingTime) {
+            // move starting time up to current cycle and add some headroom
+            newStartTime = minStartTime + 4 hours;
+        } else {
+            newStartTime = lastEndingTime;
+        }
+        newEndTime = lastEndingTime + 14 days;
+        duration = newEndTime - newStartTime;
     }
 
     /// === Day to Day Operations Functions === ///
@@ -206,15 +218,15 @@ contract VotiumBribesProcessor is CowSwapSeller {
             CVX.safeApprove(address(BVE_CVX), totalCVX);
 
             uint256 treasuryPrevBalance = BVE_CVX.balanceOf(TREASURY);
-            uint256 badgerTreePrevBalance = BVE_CVX.balanceOf(BADGER_TREE);
+            uint256 badgerTreePrevBalance = BVE_CVX.balanceOf(address(BADGER_TREE));
 
             // If we don't swap
             BVE_CVX.depositFor(TREASURY, ops_fee);
-            BVE_CVX.depositFor(BADGER_TREE, toEmit);
+            BVE_CVX.depositFor(address(BADGER_TREE), toEmit);
 
             // Update vars as we emit event with them
             ops_fee = BVE_CVX.balanceOf(TREASURY) - treasuryPrevBalance;
-            toEmit = BVE_CVX.balanceOf(BADGER_TREE) - badgerTreePrevBalance;
+            toEmit = BVE_CVX.balanceOf(address(BADGER_TREE)) - badgerTreePrevBalance;
         } else {
             // Buy from pool
 
@@ -229,18 +241,18 @@ contract VotiumBribesProcessor is CowSwapSeller {
             toEmit = totalBveCVX - ops_fee;
 
             IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
-            IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
+            IERC20(address(BVE_CVX)).safeTransfer(address(BADGER_TREE), toEmit);
         }
 
         // // Unlock Schedule
-        uint256 previousEndTime = _lastSchedule(address(BVE_CVX));
+        (uint256 newStartTime, uint256 newEndTime, uint256 duration) = _getScheduleTimes(address(BVE_CVX));
         REWARDS_LOGGER.setUnlockSchedule(
             address(BVE_CVX),
             address(BVE_CVX),
             toEmit,
-            previousEndTime,
-            previousEndTime + 14 days,
-            14 days
+            newStartTime,
+            newEndTime,
+            duration
         );
 
         // Send event
@@ -258,26 +270,26 @@ contract VotiumBribesProcessor is CowSwapSeller {
         uint256 toEmit = BADGER.balanceOf(address(this));
         require(toEmit > 0);
 
-        BADGER.safeTransfer(BADGER_TREE, toEmit);
+        BADGER.safeTransfer(address(BADGER_TREE), toEmit);
 
         // Unlock Schedule
         uint256 toEmitToLiqPool = toEmit * LIQ_FEE / BADGER_SHARE;
-        uint256 previousEndTime = _lastSchedule(address(BADGER));
+        (uint256 newStartTime, uint256 newEndTime, uint256 duration) = _getScheduleTimes(address(BVE_CVX));
         REWARDS_LOGGER.setUnlockSchedule(
             address(BVE_CVX),
             address(BADGER),
             toEmitToLiqPool,
-            previousEndTime,
-            previousEndTime + 14 days,
-            14 days
+            newStartTime,
+            newEndTime,
+            duration
         );
         REWARDS_LOGGER.setUnlockSchedule(
             address(CVX_BVE_CVX_SETT),
             address(BADGER),
             toEmit - toEmitToLiqPool,
-            previousEndTime,
-            previousEndTime + 14 days,
-            14 days
+            newStartTime,
+            newEndTime,
+            duration
         );
 
         emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
