@@ -9,21 +9,18 @@ import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 
-// TODO: https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py#L39
-// TODO: https://miro.com/app/board/uXjVO9yyd7o=/
-
-
 /// @title BribesProcessor
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev BribesProcess for bveCVX, using CowSwapSeller allows to process bribes fairly
 /// Minimizing the amount of power that the manager can have
 /// @notice This code is WIP, any feedback is appreciated alex@badger.finance
+///     Architecture: https://miro.com/app/board/uXjVO9yyd7o=/
+///     Original Python Version https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py#L39
 contract VotiumBribesProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
 
     // All events are token / amount
-    // TODO: Ask Jintao if it helps or if we can remove extra address
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
@@ -34,9 +31,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
         uint256 indexed blockNumber,
         uint256 timestamp
     );
-
-    // TODO: Bring the following script to onChain
-    // https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -97,11 +91,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
         bool timeHasExpired = block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME;
         require(msg.sender == manager || timeHasExpired);
 
-        // TODO: In order to avoid selling after, set back the allowance to 0 to the Relayer
+        // In order to avoid selling after, set back the allowance to 0 to the Relayer
         token.safeApprove(address(RELAYER), 0);
 
         // Send all tokens to badgerTree without fee
-        // TODO: Add fee if manager calls it
         uint256 amount = token.balanceOf(address(this));
         if(sendToGovernance) {
             token.safeTransfer(DEV_MULTI, amount);
@@ -232,6 +225,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 4 Emit the Badger
     function emitBadger() external nonReentrant {
+        require(msg.sender == manager);
+
         // Sends Badger to the Tree
         // Emits custom event for it
         uint256 toEmit = BADGER.balanceOf(address(this));
