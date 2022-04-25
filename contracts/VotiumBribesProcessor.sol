@@ -137,7 +137,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
             .getUnlockSchedulesFor(address(BVE_CVX), _token);
         uint256 lastEndingTime = schedules[schedules.length - 1].end;
         uint256 minStartTime = BADGER_TREE.lastPublishTimestamp();
-        if(minStartTime <= lastEndingTime) {
+        if(minStartTime + 2 hours > lastEndingTime) {
             // move starting time up to current cycle and add some headroom
             newStartTime = minStartTime + 4 hours;
         } else {
@@ -145,7 +145,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
         }
         newEndTime = lastEndingTime + 14 days;
         duration = newEndTime - newStartTime;
-        return (newStartTime, newEndTime, duration);
     }
 
     /// === Day to Day Operations Functions === ///
