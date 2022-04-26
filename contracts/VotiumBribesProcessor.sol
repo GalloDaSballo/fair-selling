@@ -58,10 +58,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
     address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
 
-    // Badger Governance
-    address public constant DEV_MULTI = 0xB65cef03b9B89f99517643226d76e286ee999e77;
-
-
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
     
