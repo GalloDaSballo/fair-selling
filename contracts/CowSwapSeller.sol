@@ -33,6 +33,8 @@ contract CowSwapSeller is ReentrancyGuard {
 
     address public manager;
 
+    address public constant DEV_MULTI = 0xB65cef03b9B89f99517643226d76e286ee999e77;
+
     /// Contract we give allowance to perform swaps
     address public constant RELAYER = 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
 
@@ -126,7 +128,7 @@ contract CowSwapSeller is ReentrancyGuard {
     }
 
     function setPricer(OnChainPricing newPricer) external {
-        require(msg.sender == manager);
+        require(msg.sender == DEV_MULTI);
         pricer = newPricer;
     }
 
