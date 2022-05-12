@@ -47,7 +47,7 @@ contract OnChainPricingMainnetLenient {
     uint256 public slippage = 200; // 2% Initially
 
 
-    function setSlippage(uint256 newSlippage) {
+    function setSlippage(uint256 newSlippage) external {
         require(msg.sender ==  TECH_OPS, "Only TechOps");
         require(newSlippage < MAX_SLIPPAGE);
         slippage = newSlippage;
