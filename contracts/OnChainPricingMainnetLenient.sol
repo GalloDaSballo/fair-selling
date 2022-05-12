@@ -17,6 +17,11 @@ import "../interfaces/curve/ICurveRouter.sol";
 /// @notice This version has 5% extra slippage to allow further flexibility
 ///     if the manager abuses the check you should consider reverting back to a more rigorous pricer
 contract OnChainPricingMainnetLenient {
+
+    struct Quote {
+        string name;
+        uint256 amountOut;
+    }
     
     // Assumption #1 Most tokens liquid pair is WETH (WETH is tokenized ETH for that chain)
     // e.g on Fantom, WETH would be wFTM
@@ -31,13 +36,24 @@ contract OnChainPricingMainnetLenient {
     // Curve / Doesn't revert on failure
     address public constant CURVE_ROUTER = 0x8e764bE4288B842791989DB5b8ec067279829809; // Curve quote and swaps
 
-    uint256 private constant ONE_ETH = 1e18;
-    uint256 private constant NINETY_FIVE = 95e16;
+    // === SLIPPAGE === //
+    // Can change slippage within rational limits
+    address public constant TECH_OPS = 0x86cbD0ce0c087b482782c181dA8d191De18C8275;
+    
+    uint256 private constant MAX_BPS = 10_000;
 
-    struct Quote {
-        string name;
-        uint256 amountOut;
+    uint256 private MAX_SLIPPAGE = 500; // 5%
+
+    uint256 slippage = 200; // 2% Initially
+
+
+    function setSlippage(uint256 newSlippage) {
+        require(msg.sender ==  TECH_OPS, "Only TechOps");
+        require(newSlippage < MAX_SLIPPAGE);
+
     }
+
+    // === PRICING === //
 
     /// @dev View function for testing the routing of the strategy
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory) {
@@ -70,7 +86,7 @@ contract OnChainPricingMainnetLenient {
             }
         }
 
-        bestQuote.amountOut = bestQuote.amountOut * NINETY_FIVE / ONE_ETH;
+        bestQuote.amountOut = bestQuote.amountOut * (ONE_ETH - slippage) / ONE_ETH;
         return bestQuote;
     }
     
