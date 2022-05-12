@@ -44,7 +44,7 @@ contract OnChainPricingMainnetLenient {
 
     uint256 private constant MAX_SLIPPAGE = 500; // 5%
 
-    uint256 slippage = 200; // 2% Initially
+    uint256 public slippage = 200; // 2% Initially
 
 
     function setSlippage(uint256 newSlippage) {
