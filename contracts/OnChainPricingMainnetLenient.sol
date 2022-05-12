@@ -42,7 +42,7 @@ contract OnChainPricingMainnetLenient {
     
     uint256 private constant MAX_BPS = 10_000;
 
-    uint256 private MAX_SLIPPAGE = 500; // 5%
+    uint256 private constant MAX_SLIPPAGE = 500; // 5%
 
     uint256 slippage = 200; // 2% Initially
 
