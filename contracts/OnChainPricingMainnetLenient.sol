@@ -86,7 +86,7 @@ contract OnChainPricingMainnetLenient {
             }
         }
 
-        bestQuote.amountOut = bestQuote.amountOut * (ONE_ETH - slippage) / ONE_ETH;
+        bestQuote.amountOut = bestQuote.amountOut * (MAX_BPS - slippage) / MAX_BPS;
         return bestQuote;
     }
     
