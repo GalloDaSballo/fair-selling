@@ -224,7 +224,7 @@ contract CowSwapSeller is ReentrancyGuard {
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
         orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
-        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount);
+        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount + orderData.feeAmount);
 
         // Once allowance is set, let's setPresignature and the order will happen
         //setPreSignature
