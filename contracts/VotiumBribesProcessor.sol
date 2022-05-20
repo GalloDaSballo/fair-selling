@@ -242,9 +242,9 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function setCustomAllowance(address token, uint256 newAllowance) external nonReentrant {
         require(msg.sender == manager);
 
-        token.safeApprove(RELAYER, 0);
+        IERC20(token).safeApprove(RELAYER, 0);
         // NOTE: Set this to the amount you need SUM(all_orders) to ensure they all go through
-        token.safeApprove(RELAYER, newAllowance); 
+        IERC20(token).safeApprove(RELAYER, newAllowance); 
     }
 }
 
