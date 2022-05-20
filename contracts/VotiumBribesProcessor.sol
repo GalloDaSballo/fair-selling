@@ -86,6 +86,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function ragequit(IERC20 token, bool sendToGovernance) external nonReentrant {
         bool timeHasExpired = block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME;
         require(msg.sender == manager || timeHasExpired);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // In order to avoid selling after, set back the allowance to 0 to the Relayer
         token.safeApprove(address(RELAYER), 0);
