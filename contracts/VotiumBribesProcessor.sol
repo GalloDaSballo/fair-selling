@@ -86,7 +86,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     function ragequit(IERC20 token, bool sendToGovernance) external nonReentrant {
         bool timeHasExpired = block.timestamp > lastBribeAction + MAX_MANAGER_IDLE_TIME;
         require(msg.sender == manager || timeHasExpired);
-        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // In order to avoid selling after, set back the allowance to 0 to the Relayer
         token.safeApprove(address(RELAYER), 0);
@@ -98,7 +97,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             emit SentBribeToGovernance(address(token), amount);
         } else {
-
+            require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
+            
             // If manager rqs to emit in time, treasury still receives a fee
             if(!timeHasExpired && msg.sender == manager) {
                 // Take a fee here
@@ -163,10 +163,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // swap it for bveCVX if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
-        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         uint256 totalCVX = CVX.balanceOf(address(this));
         require(totalCVX > 0);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // Get quote from pool
         uint256 fromPurchase = CVX_BVE_CVX_CURVE.get_dy(0, 1, totalCVX);
