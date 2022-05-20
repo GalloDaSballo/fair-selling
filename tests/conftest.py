@@ -12,6 +12,10 @@ USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
 
+## NOTE: Only test on mainnet fork or this won't work
+DOMAIN_SEP = "0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943"
+
+
 ## Contracts ##
 @pytest.fixture
 def pricer():
@@ -19,11 +23,11 @@ def pricer():
 
 @pytest.fixture
 def seller(pricer):
-  return CowSwapDemoSeller.deploy(pricer, {"from": a[0]})
+  return CowSwapDemoSeller.deploy(pricer, DOMAIN_SEP, {"from": a[0]})
 
 @pytest.fixture
 def processor(pricer):
-  return VotiumBribesProcessor.deploy(pricer, {"from": a[0]})
+  return VotiumBribesProcessor.deploy(pricer, DOMAIN_SEP, {"from": a[0]})
 
 
 @pytest.fixture
