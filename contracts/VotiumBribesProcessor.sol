@@ -25,6 +25,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
+    event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -221,6 +222,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         HARVEST_FORWARDER.distribute(address(BVE_CVX), toEmit, address(BVE_CVX));
 
         emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
+        emit BribeEmission(address(BVE_CVX), address(BVE_CVX), toEmit);
     }
 
     /// @dev
@@ -239,5 +241,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
         BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitToLp, B_BVECVX_CVX);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitToBveCvx, address(BVE_CVX));
+
+        emit BribeEmission(address(BADGER), B_BVECVX_CVX, toEmitToLp);
+        emit BribeEmission(address(BADGER), address(BVE_CVX), toEmitToBveCvx);
     }
 }
