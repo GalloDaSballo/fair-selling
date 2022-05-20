@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
+import {IHarvestForwarder} from "../interfaces/badger/IHarvestForwarder.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
@@ -24,13 +25,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
-
-    event TreeDistribution(
-        address indexed token,
-        uint256 amount,
-        uint256 indexed blockNumber,
-        uint256 timestamp
-    );
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -60,6 +54,9 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
+
+    // We send tokens to emit here
+    IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
     
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
@@ -109,11 +106,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
                 amount -= fee;
             }
-
-            token.safeTransfer(BADGER_TREE, amount);
+            token.safeApprove(address(HARVEST_FORWARDER), amount);
+            HARVEST_FORWARDER.distribute(address(token), amount, address(BVE_CVX));
 
             emit SentBribeToTree(address(token), amount);
-            emit TreeDistribution(address(token), amount, block.number, block.timestamp);
         }
     }
 
@@ -191,12 +187,20 @@ contract VotiumBribesProcessor is CowSwapSeller {
             uint256 badgerTreePrevBalance = BVE_CVX.balanceOf(BADGER_TREE);
             
             // If we don't swap
+
+            // Take the fee
             BVE_CVX.depositFor(TREASURY, ops_fee);
-            BVE_CVX.depositFor(BADGER_TREE, toEmit);
+
+            // Deposit and emit rest
+            uint256 initialBveCVXBalance = BVE_CVX.balanceOf((address(this)));
+            BVE_CVX.deposit(toEmit);
+            uint256 afterBveCVXBalance = BVE_CVX.balanceOf((address(this)));
+
+            IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
 
             // Update vars as we emit event with them
             ops_fee = BVE_CVX.balanceOf(TREASURY) - treasuryPrevBalance;
-            toEmit = BVE_CVX.balanceOf(BADGER_TREE) - badgerTreePrevBalance;
+            toEmit = BVE_CVX.balanceOf(address(this)) - initialBveCVXBalance;
         } else {
             // Buy from pool
 
@@ -210,12 +214,15 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             toEmit = totalBveCVX - ops_fee;
 
+            // Take fee
             IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
-            IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
         }
 
+        // Emit token
+        IERC20(address(BVE_CVX)).safeApprove(address(HARVEST_FORWARDER), toEmit);
+        HARVEST_FORWARDER.distribute(address(BVE_CVX), toEmit, address(BVE_CVX));
+
         emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
-        emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
     }
 
     /// @dev
@@ -228,9 +235,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
         uint256 toEmit = BADGER.balanceOf(address(this));
         require(toEmit > 0);
 
-        BADGER.safeTransfer(BADGER_TREE, toEmit);
-
-        emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
+        BADGER.safeApprove(address(HARVEST_FORWARDER), toEmit);
+        HARVEST_FORWARDER.distribute(address(BADGER), toEmit, address(BVE_CVX));
     }
 }
 
