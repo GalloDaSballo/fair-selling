@@ -162,6 +162,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
         // swap it for bveCVX if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         uint256 totalCVX = CVX.balanceOf(address(this));
         require(totalCVX > 0);
@@ -229,6 +230,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Step 4 Emit the Badger
     function emitBadger() external nonReentrant {
         require(msg.sender == manager);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // Sends Badger to the Tree
         // Emits custom event for it

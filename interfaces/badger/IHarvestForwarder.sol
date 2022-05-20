@@ -9,4 +9,5 @@ interface IHarvestForwarder {
     uint256 amount,
     address beneficiary
   ) external;
+  function badger_tree() external view returns(address);
 }
