@@ -3,6 +3,7 @@ pragma solidity 0.8.10;
 
 
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
+import {IHarvestForwarder} from "../interfaces/badger/IHarvestForwarder.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
@@ -24,13 +25,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
-
-    event TreeDistribution(
-        address indexed token,
-        uint256 amount,
-        uint256 indexed blockNumber,
-        uint256 timestamp
-    );
+    event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -49,10 +44,12 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     address public constant STRATEGY = 0x898111d1F4eB55025D0036568212425EE2274082;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
+    address public constant B_BVECVX_CVX = 0x937B8E917d0F36eDEBBA8E459C5FB16F3b315551;
 
     uint256 public constant MAX_BPS = 10_000;
     uint256 public constant BADGER_SHARE = 2750; //27.50%
     uint256 public constant OPS_FEE = 500; // 5%
+    uint256 public constant LP_FEE = 500; // 5%
 
     /// `treasury_vault_multisig`
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
@@ -60,7 +57,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
-    
+
+    // We send tokens to emit here
+    IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
+
     /// NOTE: Need constructor for CowSwapSeller
     constructor(address _pricer) CowSwapSeller(_pricer) {}
 
@@ -97,6 +97,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             emit SentBribeToGovernance(address(token), amount);
         } else {
+            require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
             
             // If manager rqs to emit in time, treasury still receives a fee
             if(!timeHasExpired && msg.sender == manager) {
@@ -109,18 +110,17 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
                 amount -= fee;
             }
-
-            token.safeTransfer(BADGER_TREE, amount);
+            token.safeApprove(address(HARVEST_FORWARDER), amount);
+            HARVEST_FORWARDER.distribute(address(token), amount, address(BVE_CVX));
 
             emit SentBribeToTree(address(token), amount);
-            emit TreeDistribution(address(token), amount, block.number, block.timestamp);
         }
     }
 
     /// === Day to Day Operations Functions === ///
 
     /// @dev
-    /// Step 1 
+    /// Step 1
     /// Use sellBribeForWETH
     /// To sell all bribes to WETH
     /// @notice nonReentrant not needed as `_doCowswapOrder` is nonReentrant
@@ -159,13 +159,14 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Step 3 Emit the CVX
     /// Takes all the CVX, takes fee, locks and emits it
     function swapCVXTobveCVXAndEmit() external nonReentrant {
-        // Will take all the CVX left, 
-        // swap it for bveCVX if cheaper, or deposit it directly 
+        // Will take all the CVX left,
+        // swap it for bveCVX if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
 
         uint256 totalCVX = CVX.balanceOf(address(this));
         require(totalCVX > 0);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // Get quote from pool
         uint256 fromPurchase = CVX_BVE_CVX_CURVE.get_dy(0, 1, totalCVX);
@@ -188,15 +189,19 @@ contract VotiumBribesProcessor is CowSwapSeller {
             CVX.safeApprove(address(BVE_CVX), totalCVX);
 
             uint256 treasuryPrevBalance = BVE_CVX.balanceOf(TREASURY);
-            uint256 badgerTreePrevBalance = BVE_CVX.balanceOf(BADGER_TREE);
-            
+
             // If we don't swap
+
+            // Take the fee
             BVE_CVX.depositFor(TREASURY, ops_fee);
-            BVE_CVX.depositFor(BADGER_TREE, toEmit);
+
+            // Deposit and emit rest
+            uint256 initialBveCVXBalance = BVE_CVX.balanceOf((address(this)));
+            BVE_CVX.deposit(toEmit);
 
             // Update vars as we emit event with them
             ops_fee = BVE_CVX.balanceOf(TREASURY) - treasuryPrevBalance;
-            toEmit = BVE_CVX.balanceOf(BADGER_TREE) - badgerTreePrevBalance;
+            toEmit = BVE_CVX.balanceOf(address(this)) - initialBveCVXBalance;
         } else {
             // Buy from pool
 
@@ -210,27 +215,37 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
             toEmit = totalBveCVX - ops_fee;
 
+            // Take fee
             IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
-            IERC20(address(BVE_CVX)).safeTransfer(BADGER_TREE, toEmit);
         }
 
+        // Emit token
+        IERC20(address(BVE_CVX)).safeApprove(address(HARVEST_FORWARDER), toEmit);
+        HARVEST_FORWARDER.distribute(address(BVE_CVX), toEmit, address(BVE_CVX));
+
         emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
-        emit TreeDistribution(address(BVE_CVX), toEmit, block.number, block.timestamp);
+        emit BribeEmission(address(BVE_CVX), address(BVE_CVX), toEmit);
     }
 
     /// @dev
     /// Step 4 Emit the Badger
     function emitBadger() external nonReentrant {
         require(msg.sender == manager);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // Sends Badger to the Tree
         // Emits custom event for it
-        uint256 toEmit = BADGER.balanceOf(address(this));
-        require(toEmit > 0);
+        uint256 toEmitTotal = BADGER.balanceOf(address(this));
+        require(toEmitTotal > 0);
 
-        BADGER.safeTransfer(BADGER_TREE, toEmit);
+        uint256 toEmitToLp = toEmitTotal * LP_FEE / BADGER_SHARE;
+        uint256 toEmitToBveCvx = toEmitTotal - toEmitToLp;
 
-        emit TreeDistribution(address(BADGER), toEmit, block.number, block.timestamp);
+        BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
+        HARVEST_FORWARDER.distribute(address(BADGER), toEmitToLp, B_BVECVX_CVX);
+        HARVEST_FORWARDER.distribute(address(BADGER), toEmitToBveCvx, address(BVE_CVX));
+
+        emit BribeEmission(address(BADGER), B_BVECVX_CVX, toEmitToLp);
+        emit BribeEmission(address(BADGER), address(BVE_CVX), toEmitToBveCvx);
     }
 }
-
