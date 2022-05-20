@@ -10,7 +10,7 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 contract CowSwapDemoSeller is CowSwapSeller {
     using SafeERC20 for IERC20;
 
-    constructor(address _pricer, bytes32 _sep) CowSwapSeller(_pricer, _sep) {}
+    constructor(address _pricer) CowSwapSeller(_pricer) {}
 
     function initiateCowswapOrder(Data calldata orderData, bytes memory orderUid) external {
         _doCowswapOrder(orderData, orderUid);

@@ -122,10 +122,12 @@ contract CowSwapSeller is ReentrancyGuard {
             mstore(add(orderUid, 32), orderDigest)
         }
     }
-    constructor(address _pricer, bytes32 newDomainSeparator) {
+    constructor(address _pricer) {
         pricer = OnChainPricing(_pricer);
         manager = msg.sender;
-        domainSeparator = newDomainSeparator;
+
+        // Fetch the domainSeparator from Settlement from THIS chain
+        domainSeparator = SETTLEMENT.domainSeparator();
     }
 
     function setPricer(OnChainPricing newPricer) external {

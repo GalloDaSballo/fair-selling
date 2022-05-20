@@ -62,7 +62,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
     
     /// NOTE: Need constructor for CowSwapSeller
-    constructor(address _pricer, bytes32 _separator) CowSwapSeller(_pricer, _separator) {}
+    constructor(address _pricer) CowSwapSeller(_pricer) {}
 
     function notifyNewRound() external {
         require(msg.sender == STRATEGY);

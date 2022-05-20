@@ -15,7 +15,7 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 contract TestProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
-    constructor(address _pricer, bytes32 _separator) CowSwapSeller(_pricer, _separator) {}
+    constructor(address _pricer) CowSwapSeller(_pricer) {}
 
 
     /// @dev Recover tokens
