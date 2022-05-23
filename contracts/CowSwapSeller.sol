@@ -56,7 +56,7 @@ contract CowSwapSeller is ReentrancyGuard {
     /// protection mixed in so that signed orders are only valid for specific
     /// GPv2 contracts.
     /// @notice Copy pasted from mainnet because we need this
-    bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
+    bytes32 public immutable domainSeparator;
         // Cowswap Order Data Interface 
     uint256 constant UID_LENGTH = 56;
 
@@ -125,6 +125,9 @@ contract CowSwapSeller is ReentrancyGuard {
     constructor(address _pricer) {
         pricer = OnChainPricing(_pricer);
         manager = msg.sender;
+
+        // Fetch the domainSeparator from Settlement from THIS chain
+        domainSeparator = SETTLEMENT.domainSeparator();
     }
 
     function setPricer(OnChainPricing newPricer) external {
@@ -224,7 +227,7 @@ contract CowSwapSeller is ReentrancyGuard {
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
         orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
-        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount);
+        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount + orderData.feeAmount);
 
         // Once allowance is set, let's setPresignature and the order will happen
         //setPreSignature

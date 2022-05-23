@@ -248,4 +248,18 @@ contract VotiumBribesProcessor is CowSwapSeller {
         emit BribeEmission(address(BADGER), B_BVECVX_CVX, toEmitToLp);
         emit BribeEmission(address(BADGER), address(BVE_CVX), toEmitToBveCvx);
     }
+
+
+    /// === EXTRA === ///
+
+    /// @dev Set new allowance to the relayer
+    /// @notice used if you place two or more orders with the same token
+    ///     In that case, place all orders, then set allowance to the sum of all orders
+    function setCustomAllowance(address token, uint256 newAllowance) external nonReentrant {
+        require(msg.sender == manager);
+
+        IERC20(token).safeApprove(RELAYER, 0);
+        // NOTE: Set this to the amount you need SUM(all_orders) to ensure they all go through
+        IERC20(token).safeApprove(RELAYER, newAllowance); 
+    }
 }
