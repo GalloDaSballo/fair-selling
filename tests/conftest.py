@@ -8,9 +8,13 @@ console = Console()
 DEV_MULTI = "0xB65cef03b9B89f99517643226d76e286ee999e77"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+BADGER = "0x3472A5A71965499acd81997a54BBA8D852C6E53d"
+CVX = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"
+DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
+DAI_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
 
 ## Contracts ##
 @pytest.fixture
@@ -25,6 +29,9 @@ def seller(pricer):
 def processor(pricer):
   return VotiumBribesProcessor.deploy(pricer, {"from": a[0]})
 
+@pytest.fixture
+def oneE18():
+  return 1000000000000000000
 
 @pytest.fixture
 def usdc():
@@ -36,7 +43,15 @@ def weth():
 
 @pytest.fixture
 def badger():
-  return interface.ERC20(WETH)
+  return interface.ERC20(BADGER)
+
+@pytest.fixture
+def cvx():
+  return interface.ERC20(CVX)
+  
+@pytest.fixture
+def dai():
+  return interface.ERC20(DAI)
 
 @pytest.fixture
 def usdc_whale():
