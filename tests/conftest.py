@@ -11,10 +11,12 @@ USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 BADGER = "0x3472A5A71965499acd81997a54BBA8D852C6E53d"
 CVX = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"
 DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
+WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
 DAI_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
+WBTC_WHALE = "0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0"
 
 ## Contracts ##
 @pytest.fixture
@@ -32,6 +34,10 @@ def processor(pricer):
 @pytest.fixture
 def oneE18():
   return 1000000000000000000
+
+@pytest.fixture
+def wbtc():
+  return interface.ERC20(WBTC)
 
 @pytest.fixture
 def usdc():
