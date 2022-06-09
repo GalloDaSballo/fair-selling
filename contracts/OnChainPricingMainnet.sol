@@ -11,6 +11,7 @@ import {Address} from "@oz/utils/Address.sol";
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
+import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 
 /// @title OnChainPricing
@@ -39,6 +40,9 @@ contract OnChainPricingMainnet {
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
     uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000];
+	
+    // BalancerV2 Vault
+    address public constant BALANCERV2_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
 
     struct Quote {
         string name;
@@ -224,6 +228,43 @@ contract OnChainPricingMainnet {
     function _getUniV3PoolAddress(address token0, address token1, uint24 fee) internal pure returns (address) {
         bytes32 addr = keccak256(abi.encodePacked(hex'ff', UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
         return address(uint160(uint256(addr)));
+    }
+	
+    /// @dev Given the pool(which should include both in/out tokens) id & the input/output token, returns the quote for input amount from Balancer V2
+    function getBalancerPrice(bytes32 poolId, address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) { 
+        address[] memory assets = new address[](2);
+        assets[0] = tokenIn;
+        assets[1] = tokenOut;
+		
+        BatchSwapStep[] memory swaps = new BatchSwapStep[](1);
+        swaps[0] = BatchSwapStep(poolId, 0, 1, amountIn, "");
+		
+        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
+		
+        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
+
+        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
+        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
+    }
+	
+    /// @dev Given the first pool(which should include both in/connector tokens) id & second pool(which should include both connector/out tokens) id 
+    /// @dev and the input/output token, returns the quote for input amount from Balancer V2
+    function getBalancerPriceWithConnector(bytes32 firstPoolId, bytes32 secondPoolId, address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) { 
+        address[] memory assets = new address[](3);
+        assets[0] = tokenIn;
+        assets[1] = connectorToken;
+        assets[2] = tokenOut;
+		
+        BatchSwapStep[] memory swaps = new BatchSwapStep[](2);
+        swaps[0] = BatchSwapStep(firstPoolId, 0, 1, amountIn, "");
+        swaps[1] = BatchSwapStep(secondPoolId, 1, 2, 0, "");// amount == 0 means use all from previous step
+		
+        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
+		
+        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
+
+        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
+        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
     }
 
     // TODO: Consider adding a `bool` check for `isWeth` to skip the weth check (as it's computed above)
