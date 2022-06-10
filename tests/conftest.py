@@ -93,7 +93,7 @@ def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_w
 
   badger.transfer(processor, 6e22, {"from": badger_whale})
 
-  ## Also approve contract access from bveCVX
+  ## Also approve contract access from bveCVX
   interface.ISettV4(bve_cvx).approveContractAccess(processor, {"from": accounts.at(interface.ISettV4(bve_cvx).governance(), force=True)})
 
 
