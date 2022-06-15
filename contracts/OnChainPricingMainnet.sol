@@ -12,6 +12,7 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/curve/ICurveRouter.sol";
+import "../interfaces/curve/ICurvePool.sol";
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
@@ -39,34 +40,44 @@ contract OnChainPricingMainnet {
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
     uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000];
+	
+    uint256 public constant FEE_SCALE = 100000;
 
     struct Quote {
         string name;
         uint256 amountOut;
+        address[] pools; // specific pools involved in the optimal swap path
+        uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
     }
 
     /// @dev View function for testing the routing of the strategy
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory) {
-        bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
-        uint256 length = wethInvolved? 4 : 5; // Add length you need
+        uint256 length = (tokenIn == WETH || tokenOut == WETH)? 4 : 5; // Add length you need
 
         Quote[] memory quotes = new Quote[](length);
+        address[] memory dummyPools;
+        uint256[] memory dummyPoolFees;
 
-        uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[0] = Quote("curve", curveQuote);
+        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        if (curveQuote > 0){		   
+            (address[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
+            quotes[0] = Quote("curve", curveQuote, curvePools, curvePoolFees);		
+        }else{
+            quotes[0] = Quote("curve", curveQuote, dummyPools, dummyPoolFees);         			
+        }
 
         uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[1] = Quote("uniV2", uniQuote);
+        quotes[1] = Quote("uniV2", uniQuote, dummyPools, dummyPoolFees);
 
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[2] = Quote("sushi", sushiQuote);
+        quotes[2] = Quote("sushi", sushiQuote, dummyPools, dummyPoolFees);
 
         uint256 univ3Quote = getUniV3Price(tokenIn, amountIn, tokenOut);
-        quotes[3] = Quote("uniV3", univ3Quote);
+        quotes[3] = Quote("uniV3", univ3Quote, dummyPools, dummyPoolFees);
 
-        if(!wethInvolved){
+        if(tokenIn != WETH && tokenOut != WETH){
             uint256 univ3WithWETHQuote = getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
-            quotes[4] = Quote("uniV3WithWETH", univ3WithWETHQuote);		
+            quotes[4] = Quote("uniV3WithWETH", univ3WithWETHQuote, dummyPools, dummyPoolFees);		
         }
 
         /// TODO: Add Balancer
@@ -86,8 +97,7 @@ contract OnChainPricingMainnet {
 
 
         return bestQuote;
-    }
-    
+    }    
 
     /// === Component Functions === /// 
     /// Why bother?
@@ -231,9 +241,18 @@ contract OnChainPricingMainnet {
 
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
-    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
-        (, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
+    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
+        (address pool, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
 
-        return curveQuote;
+        return (pool, curveQuote);
+    }
+	
+    /// @return assembled curve pools and fees array for given pool
+    function _getCurveFees(address _pool) internal view returns (address[] memory, uint256[] memory){	
+        address[] memory curvePools = new address[](1);
+        curvePools[0] = _pool;
+        uint256[] memory curvePoolFees = new uint256[](1);
+        curvePoolFees[0] = ICurvePool(_pool).fee() * FEE_SCALE / 1e10;//https://curve.readthedocs.io/factory-pools.html?highlight=fee#StableSwap.fee
+        return (curvePools, curvePoolFees);
     }
 }
