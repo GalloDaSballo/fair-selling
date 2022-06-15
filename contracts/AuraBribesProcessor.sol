@@ -239,7 +239,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         } else {
             // Buy from pool
 
-            AURA.safeApprove(address(IBalancerVault), totalAURA);
+            AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
 
             // fromPurchase is calculated in same call so provides no slippage protection
             // but we already calculated it so may as well use that
