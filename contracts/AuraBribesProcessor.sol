@@ -42,7 +42,8 @@ contract AuraBribesProcessor is CowSwapSeller {
     IERC20 public constant AURA = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    address public constant STRATEGY = ;
+    //TODO: mainnet
+    address public constant STRATEGY = 1;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
 
     uint256 public constant MAX_BPS = 10_000;
@@ -54,9 +55,11 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
     address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
 
-    ISettV4 public constant BVE_AURA = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
+    //TODO: mainnet
+    ISettV4 public constant BVE_AURA = ISettV4();
 
-    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x6fc73b9d624b543f8b6b88fc3ce627877ff169ee000200000000000000000235;
+    //TODO: mainnet 
+    bytes32 public constant AURA_BVEAURA_POOL_ID = 1;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -199,6 +202,7 @@ contract AuraBribesProcessor is CowSwapSeller {
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
+            fundManagement
         )
 
         // Check math from vault
@@ -208,7 +212,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(fromDeposit > fromPurchase) {
+        if(fromDeposit > fromPurchase[0]) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
@@ -235,11 +239,20 @@ contract AuraBribesProcessor is CowSwapSeller {
         } else {
             // Buy from pool
 
-            AURA.safeApprove(address(CVX_BVE_AURA_CURVE), totalCVX);
+            AURA.safeApprove(address(IBalancerVault), totalAURA);
 
             // fromPurchase is calculated in same call so provides no slippage protection
             // but we already calculated it so may as well use that
-            uint256 totalBveAURA = CVX_BVE_AURA_CURVE.exchange(0, 1, totalCVX, fromPurchase);
+            IBalancerVault.SingleSwap singleSwap = IBalancerVault.SingleSwap({
+                poolId: AURA_BVEAURA_POOL_ID,
+                kind: IBalancerVault.SwapKind.GIVEN_IN,
+                assetIn: IAsset(address(AURA)),
+                assetOut: IAsset(address(BVE_AURA)),
+                amount: totalAURA,
+                userData: new bytes(0)
+            });
+
+            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, 0, type(uint256).max);
 
             ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
