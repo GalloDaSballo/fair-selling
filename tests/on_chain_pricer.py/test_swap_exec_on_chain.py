@@ -18,9 +18,12 @@ def test_swap_in_curve(oneE18, weth_whale, weth, crv, pricer, swapexecutor):
 
   ## swap on chain
   slippageTolerance = 0.95
-  weth.transfer(swapexecutor, sell_amount, {'from': weth_whale})
+  weth.approve(swapexecutor.address, 0, {'from': weth_whale})
+  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
+  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  
   minOutput = quote[1] * slippageTolerance
-  swapexecutor.execSwapCurve(quote[0], sell_amount, weth.address, crv.address, minOutput, swapexecutor.address)
+  swapexecutor.execSwapCurve(quote[0], sell_amount, weth.address, crv.address, minOutput, swapexecutor.address, {'from': weth_whale})
   balInExecutor = crv.balanceOf(swapexecutor)
   assert balInExecutor >= minOutput
 
@@ -39,10 +42,14 @@ def test_swap_in_univ2(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):
   assert quote >= p 
 
   ## swap on chain
-  slippageTolerance = 0.95
-  weth.transfer(swapexecutor, sell_amount, {'from': weth_whale})
+  slippageTolerance = 0.95  
+  weth.approve(swapexecutor.address, 0, {'from': weth_whale})
+  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
+  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  
   minOutput = quote * slippageTolerance
-  swapexecutor.execSwapUniV2(uniV2Router, sell_amount, [weth.address, usdc.address], minOutput, swapexecutor.address)
+  swapexecutor.execSwapUniV2(uniV2Router, sell_amount, [weth.address, usdc.address], minOutput, swapexecutor.address, {'from': weth_whale})
+  
   balInExecutor = usdc.balanceOf(swapexecutor)
   assert balInExecutor >= minOutput
   
@@ -61,10 +68,13 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
 
   ## swap on chain
   slippageTolerance = 0.95
-  wbtc.transfer(swapexecutor, sell_amount, {'from': wbtc_whale})
+  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
+  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
+  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
   minOutput = quote * slippageTolerance
+  
   encodedPath = swapexecutor.encodeUniV3TwoHop(wbtc.address, 500, weth.address, 500, usdc.address)
-  swapexecutor.execSwapUniV3(sell_amount, wbtc.address, encodedPath, minOutput, swapexecutor.address)
+  swapexecutor.execSwapUniV3(sell_amount, wbtc.address, encodedPath, minOutput, swapexecutor.address, {'from': wbtc_whale})
   balInExecutor = usdc.balanceOf(swapexecutor)
   assert balInExecutor >= minOutput
  
@@ -83,11 +93,14 @@ def test_swap_in_balancer_batch(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, sw
 
   ## swap on chain
   slippageTolerance = 0.95
-  wbtc.transfer(swapexecutor, sell_amount, {'from': wbtc_whale})
+  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
+  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
+  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
+  
   minOutput = quote[1] * slippageTolerance
   wbtc2WETHPoolId = '0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e'
   weth2USDCPoolId = '0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019'
-  swapexecutor.execSwapBalancerV2Batch(wbtc2WETHPoolId, weth2USDCPoolId, sell_amount, wbtc.address, usdc.address, weth.address, minOutput, swapexecutor.address)
+  swapexecutor.execSwapBalancerV2Batch(wbtc2WETHPoolId, weth2USDCPoolId, sell_amount, wbtc.address, usdc.address, weth.address, minOutput, swapexecutor.address, {'from': wbtc_whale})
   balInExecutor = usdc.balanceOf(swapexecutor)
   assert balInExecutor >= minOutput
  
@@ -106,9 +119,12 @@ def test_swap_in_balancer_single(oneE18, weth_whale, weth, usdc, pricer, swapexe
 
   ## swap on chain
   slippageTolerance = 0.95
-  weth.transfer(swapexecutor, sell_amount, {'from': weth_whale})
+  weth.approve(swapexecutor.address, 0, {'from': weth_whale})  
+  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
+  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  
   minOutput = quote[1] * slippageTolerance
   weth2USDCPoolId = '0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019'
-  swapexecutor.execSwapBalancerV2Single(weth2USDCPoolId, sell_amount, weth.address, usdc.address, minOutput, swapexecutor.address)
+  swapexecutor.execSwapBalancerV2Single(weth2USDCPoolId, sell_amount, weth.address, usdc.address, minOutput, swapexecutor.address, {'from': weth_whale})
   balInExecutor = usdc.balanceOf(swapexecutor)
   assert balInExecutor >= minOutput

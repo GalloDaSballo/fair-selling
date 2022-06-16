@@ -24,6 +24,8 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(UNIV3_ROUTER, 0);
         IERC20(tokenIn).safeApprove(UNIV3_ROUTER, amountIn);
 		
+        _safeTransfeFrom(tokenIn, amountIn);
+		
         ExactInputParams memory params = ExactInputParams({
                 path: abiEncodePackedPath,
                 recipient: receiver,
@@ -48,6 +50,8 @@ contract OnChainSwapMainnet {
         IERC20(path[0]).safeApprove(router, 0);
         IERC20(path[0]).safeApprove(router, amountIn);
 		
+        _safeTransfeFrom(path[0], amountIn);
+		
         uint256[] memory _amountsOut = IUniswapRouterV2(router).swapExactTokensForTokens(amountIn, expectedOut, path, receiver, block.timestamp);
         return _amountsOut[_amountsOut.length - 1];
     }
@@ -57,6 +61,8 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(CURVE_ROUTER, 0);
         IERC20(tokenIn).safeApprove(CURVE_ROUTER, amountIn);
 		
+        _safeTransfeFrom(tokenIn, amountIn);
+		
         return ICurveRouter(CURVE_ROUTER).exchange(pool, tokenIn, tokenOut, amountIn, expectedOut, receiver);
     }
 
@@ -64,6 +70,8 @@ contract OnChainSwapMainnet {
     function execSwapBalancerV2Single(bytes32 poolID, uint256 amountIn, address tokenIn, address tokenOut, uint256 expectedOut, address receiver) external returns (uint256) {
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, 0);
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, amountIn);
+		
+        _safeTransfeFrom(tokenIn, amountIn);
 		
         SingleSwap memory singleSwap = SingleSwap(poolID, SwapKind.GIVEN_IN, tokenIn, tokenOut, amountIn, "");
         FundManagement memory funds = FundManagement(address(this), false, receiver, false);		
@@ -76,6 +84,8 @@ contract OnChainSwapMainnet {
     function execSwapBalancerV2Batch(bytes32 firstPoolId, bytes32 secondPoolId, uint256 amountIn, address tokenIn, address tokenOut, address connectorToken, uint256 expectedOut, address receiver) external returns (uint256) {
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, 0);
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, amountIn);
+		
+        _safeTransfeFrom(tokenIn, amountIn);
 		
         address[] memory assets = new address[](3);
         assets[0] = tokenIn;
@@ -97,4 +107,18 @@ contract OnChainSwapMainnet {
         int256[] memory _deltas = IBalancerV2Vault(BALANCERV2_VAULT).batchSwap(SwapKind.GIVEN_IN, swaps, assets, funds, limits, block.timestamp);
         return uint256(0 - _deltas[_deltas.length - 1]);
     }
+	
+    /// @dev Transfer tokens from msg.sender to this contract
+    /// @dev msg.sender need to approve this contract in given token first
+    function _safeTransfeFrom(address token, uint256 value) internal {
+        uint256 _beforeVal = IERC20(token).balanceOf(address(this));
+		
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, msg.sender, address(this), value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'STF');
+		
+        uint256 _afterVal = IERC20(token).balanceOf(address(this));
+        uint256 _diff = _afterVal - _beforeVal;
+        require(_diff == value, 'STFdiff');// no support for tokens those charge tax upon transfer
+    }
+
 }
