@@ -41,7 +41,7 @@ contract AuraBribesProcessor is CowSwapSeller {
     // Way more time than expected
 
     IERC20 public constant BADGER = IERC20(0x3472A5A71965499acd81997a54BBA8D852C6E53d);
-    IERC20 public constant AURA = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    IERC20 public constant AURA = IERC20(0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF);
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     address public constant STRATEGY = 0x3c0989eF27e3e3fAb87a2d7C38B35880C90E63b5;
@@ -196,14 +196,14 @@ contract AuraBribesProcessor is CowSwapSeller {
         });
 
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
-        swaps[1] = batchSwapStep;
-
-        int256[] memory fromPurchase = BALANCER_VAULT.queryBatchSwap(
+        swaps[0] = batchSwapStep;
+        // Appprove before querying???
+        int256 memory fromPurchase = BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
             fundManagement
-        );
+        )[0];
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
@@ -212,7 +212,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(int(fromDeposit) > fromPurchase[0]) {
+        if(int(fromDeposit) > fromPurchase) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
@@ -279,6 +279,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         // Sends Badger to the Tree
         // Emits custom event for it
         uint256 toEmitTotal = BADGER.balanceOf(address(this));
+        require(toEmitTotal > 0);
 
         BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));

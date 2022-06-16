@@ -8,6 +8,7 @@ console = Console()
 DEV_MULTI = "0xB65cef03b9B89f99517643226d76e286ee999e77"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
@@ -45,7 +46,7 @@ def badger():
 
 @pytest.fixture
 def aura():
-  return interface.ERC20(WETH)
+  return interface.ERC20(AURA)
 
 @pytest.fixture
 def usdc_whale():
@@ -72,9 +73,14 @@ def strategy(processor):
   return accounts.at(processor.STRATEGY(), force=True)
 
 @pytest.fixture
+def aura_strategy(aura_processor):
+  return accounts.at(aura_processor.STRATEGY(), force=True)
+
+@pytest.fixture
 def bve_cvx(processor):
   return interface.ERC20(processor.BVE_CVX())
 
+@pytest.fixture
 def bve_aura(aura_processor):
   return interface.ERC20(aura_processor.BVE_AURA())
 
@@ -99,21 +105,21 @@ def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_w
 
 
 @pytest.fixture
-def setup_aura_processor(aura_processor, strategy, usdc, usdc_whale, badger, aura, badger_whale, aura_whale, bve_aura):
+def setup_aura_processor(aura_processor, aura_strategy, usdc, usdc_whale, badger, aura, badger_whale, aura_whale, bve_aura):
   ## Do the donation / Transfer Bribes
   usdc.transfer(aura_processor, 6e10, {"from": usdc_whale})
 
-  ## Also transfer some BADGER and CVX for later processing
+  ## Also transfer some BADGER and Aura for later processing
   aura.transfer(aura_processor, 3e22, {"from": aura_whale})
 
   badger.transfer(aura_processor, 6e22, {"from": badger_whale})
 
-  ## Also approve contract access from bveCVX
-  interface.ISettV4(bve_aura).approveContractAccess(aura_processor, {"from": accounts.at(interface.ISettV4(bve_aura).governance(), force=True)})
+  ## Also approve contract access from bveaura
+  #interface.ISettV4(bve_aura_sett.approveContractAccess(aura_processor, {"from": accounts.at(interface.ISettV4(bve_aura).governance(), force=True)})
 
 
   ## Notify new round, 28 days before anyone can unlock tokens
-  processor.notifyNewRound({"from": strategy})
+  aura_processor.notifyNewRound({"from": aura_strategy})
 
   return aura_processor
 
