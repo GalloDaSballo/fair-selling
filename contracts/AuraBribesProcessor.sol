@@ -5,6 +5,8 @@ pragma solidity 0.8.10;
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {IHarvestForwarder} from "../interfaces/badger/IHarvestForwarder.sol";
 import {ISettV4} from "../interfaces/badger/ISettV4.sol";
+import {IBalancerVault} from "../interfaces/balancer/IBalancerVault.sol";
+import {IAsset} from "../interfaces/balancer/IAsset.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
@@ -42,8 +44,7 @@ contract AuraBribesProcessor is CowSwapSeller {
     IERC20 public constant AURA = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    //TODO: mainnet
-    address public constant STRATEGY = 1;
+    address public constant STRATEGY = 0x3c0989eF27e3e3fAb87a2d7C38B35880C90E63b5;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
 
     uint256 public constant MAX_BPS = 10_000;
@@ -55,11 +56,10 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
     address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
 
-    //TODO: mainnet
-    ISettV4 public constant BVE_AURA = ISettV4();
+    ISettV4 public constant BVE_AURA = ISettV4(0xc02e10157c71008B6b8F8E6AbF8d3EaC60ed561e);
 
     //TODO: mainnet 
-    bytes32 public constant AURA_BVEAURA_POOL_ID = 1;
+    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -183,27 +183,27 @@ contract AuraBribesProcessor is CowSwapSeller {
             toInternalBalance: false
         });
 
-        IAsset[] assets = new IAsset[2];
+        IAsset[] memory assets = new IAsset[](2);
         assets[0] = IAsset(address(AURA));
         assets[1] = IAsset(address(BVE_AURA));
 
-        IBalancerVault.BatchSwapStep batchSwapStep = IBalancerVault.BatchSwapStep({
+        IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
             poolId: AURA_BVEAURA_POOL_ID,
-            assetIn: 0,
-            assetOut: 1,
-            amount: totalAURA
+            assetInIndex: 0,
+            assetOutIndex: 1,
+            amount: totalAURA,
             userData: new bytes(0)
         });
 
-        IBalancerVault.BatchSwap swaps = IBalancerVault.BatchSwapStep[1];
+        IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
         swaps[1] = batchSwapStep;
 
-        uint256[] fromPurchase = BALANCER_VAULT.queryBatchSwap(
+        int256[] memory fromPurchase = BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
             fundManagement
-        )
+        );
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
@@ -212,7 +212,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(fromDeposit > fromPurchase[0]) {
+        if(int(fromDeposit) > fromPurchase[0]) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
@@ -243,7 +243,7 @@ contract AuraBribesProcessor is CowSwapSeller {
 
             // fromPurchase is calculated in same call so provides no slippage protection
             // but we already calculated it so may as well use that
-            IBalancerVault.SingleSwap singleSwap = IBalancerVault.SingleSwap({
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
                 poolId: AURA_BVEAURA_POOL_ID,
                 kind: IBalancerVault.SwapKind.GIVEN_IN,
                 assetIn: IAsset(address(AURA)),

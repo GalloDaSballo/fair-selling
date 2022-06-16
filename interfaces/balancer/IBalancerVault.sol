@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity 0.8.10;
 pragma experimental ABIEncoderV2;
 
 import {IAsset} from "./IAsset.sol";
@@ -252,6 +252,13 @@ interface IBalancerVault {
         uint256 amount;
         bytes userData;
     }
+
+    function queryBatchSwap(
+        SwapKind kind,
+        BatchSwapStep[] memory swaps,
+        IAsset[] memory assets,
+        FundManagement memory funds
+    ) external returns (int256[] memory);
 
     /**
      * @dev All tokens in a swap are either sent from the `sender` account to the Vault, or from the Vault to the
