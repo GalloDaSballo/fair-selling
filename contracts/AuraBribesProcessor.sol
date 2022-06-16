@@ -4,7 +4,7 @@ pragma solidity 0.8.10;
 
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {IHarvestForwarder} from "../interfaces/badger/IHarvestForwarder.sol";
-import {ISettV4} from "../interfaces/badger/ISettV4.sol";
+import {IVault} from "../interfaces/badger/IVault.sol";
 import {IBalancerVault} from "../interfaces/balancer/IBalancerVault.sol";
 import {IAsset} from "../interfaces/balancer/IAsset.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
@@ -56,7 +56,7 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
     address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
 
-    ISettV4 public constant BVE_AURA = ISettV4(0xc02e10157c71008B6b8F8E6AbF8d3EaC60ed561e);
+    IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
     //TODO: mainnet 
     bytes32 public constant AURA_BVEAURA_POOL_ID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
