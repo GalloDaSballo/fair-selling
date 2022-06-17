@@ -198,10 +198,12 @@ contract AuraBribesProcessor is CowSwapSeller {
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
         swaps[0] = batchSwapStep;
         
-        AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
-
-        //TODO: Check stableswap pool for aura pricing
-        int256 fromPurchase = 0;
+        int256 memory fromPurchase = BALANCER_VAULT.queryBatchSwap(
+            IBalancerVault.SwapKind.GIVEN_IN,
+            swaps,
+            assets,
+            fundManagement
+        )[0];
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
@@ -235,10 +237,10 @@ contract AuraBribesProcessor is CowSwapSeller {
             ops_fee = BVE_AURA.balanceOf(TREASURY) - treasuryPrevBalance;
             toEmit = BVE_AURA.balanceOf(address(this)) - initialBveAURABalance;
         } else {
-            // Buy from pool
+            // Buy from pool using singleSwap
 
-            // fromPurchase is calculated in same call so provides no slippage protection
-            // but we already calculated it so may as well use that
+            AURA.safeApprove(address(BVE_AURA), totalAURA);
+
             IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
                 poolId: AURA_BVEAURA_POOL_ID,
                 kind: IBalancerVault.SwapKind.GIVEN_IN,
