@@ -198,7 +198,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
         swaps[0] = batchSwapStep;
         
-        int256 memory fromPurchase = BALANCER_VAULT.queryBatchSwap(
+        int256 fromPurchase = BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
