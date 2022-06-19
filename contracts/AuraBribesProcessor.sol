@@ -12,13 +12,12 @@ import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 
-/// @title BribesProcessor
-/// @author Alex the Entreprenerd @ BadgerDAO
-/// @dev BribesProcess for bveCVX, using CowSwapSeller allows to process bribes fairly
+/// @title AuraBribesProcessor
+/// @author Swole @ BadgerDAO
+/// @dev BribesProcess for bveAura, using CowSwapSeller allows to process bribes fairly
 /// Minimizing the amount of power that the manager can have
-/// @notice This code is WIP, any feedback is appreciated alex@badger.finance
-///     Architecture: https://miro.com/app/board/uXjVO9yyd7o=/
-///     Original Python Version https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py#L39
+/// @notice This code is forked from the VotiumBribesProcessor
+///     Original Version: https://github.com/GalloDaSballo/fair-selling/blob/main/contracts/VotiumBribesProcessor.sol
 contract AuraBribesProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
@@ -212,16 +211,14 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(int(fromDeposit) > fromPurchase) {
+        if(int256(fromDeposit) > fromPurchase) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
             ops_fee = totalAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
             toEmit = totalAURA - ops_fee;
-
             AURA.safeApprove(address(BVE_AURA), totalAURA);
-
             uint256 treasuryPrevBalance = BVE_AURA.balanceOf(TREASURY);
 
             // If we don't swap
@@ -239,7 +236,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         } else {
             // Buy from pool using singleSwap
 
-            AURA.safeApprove(address(BVE_AURA), totalAURA);
+            AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
 
             IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
                 poolId: AURA_BVEAURA_POOL_ID,
@@ -250,7 +247,7 @@ contract AuraBribesProcessor is CowSwapSeller {
                 userData: new bytes(0)
             });
 
-            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, 0, type(uint256).max);
+            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, 0, block.number);
 
             ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
