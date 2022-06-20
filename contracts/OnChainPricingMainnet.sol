@@ -14,6 +14,16 @@ import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
 
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
+
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
@@ -44,9 +54,9 @@ contract OnChainPricingMainnet {
     uint256 public constant FEE_SCALE = 100000;
 
     struct Quote {
-        string name;
+        SwapType name;
         uint256 amountOut;
-        address[] pools; // specific pools involved in the optimal swap path
+        bytes32[] pools; // specific pools involved in the optimal swap path
         uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
     }
 
@@ -55,29 +65,29 @@ contract OnChainPricingMainnet {
         uint256 length = (tokenIn == WETH || tokenOut == WETH)? 4 : 5; // Add length you need
 
         Quote[] memory quotes = new Quote[](length);
-        address[] memory dummyPools;
+        bytes32[] memory dummyPools;
         uint256[] memory dummyPoolFees;
 
         (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
         if (curveQuote > 0){		   
-            (address[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
-            quotes[0] = Quote("curve", curveQuote, curvePools, curvePoolFees);		
+            (bytes32[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
+            quotes[0] = Quote(SwapType.CURVE, curveQuote, curvePools, curvePoolFees);		
         }else{
-            quotes[0] = Quote("curve", curveQuote, dummyPools, dummyPoolFees);         			
+            quotes[0] = Quote(SwapType.CURVE, curveQuote, dummyPools, dummyPoolFees);         			
         }
 
         uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[1] = Quote("uniV2", uniQuote, dummyPools, dummyPoolFees);
+        quotes[1] = Quote(SwapType.UNIV2, uniQuote, dummyPools, dummyPoolFees);
 
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[2] = Quote("sushi", sushiQuote, dummyPools, dummyPoolFees);
+        quotes[2] = Quote(SwapType.SUSHI, sushiQuote, dummyPools, dummyPoolFees);
 
         uint256 univ3Quote = getUniV3Price(tokenIn, amountIn, tokenOut);
-        quotes[3] = Quote("uniV3", univ3Quote, dummyPools, dummyPoolFees);
+        quotes[3] = Quote(SwapType.UNIV3, univ3Quote, dummyPools, dummyPoolFees);
 
         if(tokenIn != WETH && tokenOut != WETH){
             uint256 univ3WithWETHQuote = getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
-            quotes[4] = Quote("uniV3WithWETH", univ3WithWETHQuote, dummyPools, dummyPoolFees);		
+            quotes[4] = Quote(SwapType.UNIV3WITHWETH, univ3WithWETHQuote, dummyPools, dummyPoolFees);		
         }
 
         /// TODO: Add Balancer
@@ -247,10 +257,14 @@ contract OnChainPricingMainnet {
         return (pool, curveQuote);
     }
 	
-    /// @return assembled curve pools and fees array for given pool
-    function _getCurveFees(address _pool) internal view returns (address[] memory, uint256[] memory){	
-        address[] memory curvePools = new address[](1);
-        curvePools[0] = _pool;
+    function convertToBytes32(address _input) public pure returns (bytes32){
+        return bytes32(uint256(uint160(_input)) << 96);
+    }
+	
+    /// @return assembled curve pools and fees in required Quote struct for given pool
+    function _getCurveFees(address _pool) internal view returns (bytes32[] memory, uint256[] memory){	
+        bytes32[] memory curvePools = new bytes32[](1);
+        curvePools[0] = convertToBytes32(_pool);
         uint256[] memory curvePoolFees = new uint256[](1);
         curvePoolFees[0] = ICurvePool(_pool).fee() * FEE_SCALE / 1e10;//https://curve.readthedocs.io/factory-pools.html?highlight=fee#StableSwap.fee
         return (curvePools, curvePoolFees);

@@ -11,9 +11,19 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/cowswap/ICowSettlement.sol";
 
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
+
 // Onchain Pricing Interface
 struct Quote {
-    string name;
+    SwapType name;
     uint256 amountOut;
 }
 interface OnChainPricing {
