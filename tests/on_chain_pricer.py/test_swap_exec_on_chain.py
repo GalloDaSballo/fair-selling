@@ -57,6 +57,31 @@ def test_swap_in_univ2(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):
   assert (balAfter - balBefore) >= minOutput
   
 """
+    test swap in Uniswap V3 from token A to token B directly
+"""
+## @pytest.mark.skip(reason="WBTC2USDC")
+def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecutor):  
+  ## 1e8
+  sell_amount = 1 * 100000000
+
+  ## minimum quote for WBTC in USDC(1e6)
+  p = 1 * 15000 * 1000000  
+  quote = pricer.getUniV3Price.call(wbtc.address, sell_amount, usdc.address) 
+  assert quote >= p 
+
+  ## swap on chain
+  slippageTolerance = 0.95
+  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
+  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
+  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
+  
+  minOutput = quote * slippageTolerance   
+  balBefore = usdc.balanceOf(wbtc_whale)
+  swapexecutor.doOptimalSwapWithQuote(wbtc.address, usdc.address, sell_amount, (3, minOutput, [], [3000]), {'from': wbtc_whale})
+  balAfter = usdc.balanceOf(wbtc_whale)
+  assert (balAfter - balBefore) >= minOutput
+  
+"""
     test swap in Uniswap V3 from token A to token B via connectorToken C
 """
 ## @pytest.mark.skip(reason="WBTC2WETH2USDC")
