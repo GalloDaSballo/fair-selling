@@ -27,6 +27,8 @@ contract AuraBribesProcessor is CowSwapSeller {
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
     event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
+    event AuraDepositAmount(uint256 amount);
+    event AuraSwapAmount(uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -57,8 +59,7 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
-    //TODO: mainnet 
-    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
+    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -208,10 +209,13 @@ contract AuraBribesProcessor is CowSwapSeller {
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
         uint256 fromDeposit = totalAURA * BVE_AURA.totalSupply() / BVE_AURA.balance();
 
+        emit AuraDepositAmount(fromDeposit);
+        emit AuraSwapAmount(uint256(fromPurchase));
+
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(int256(fromDeposit) > fromPurchase) {
+        if(fromDeposit > uint256(fromPurchase)) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
@@ -247,7 +251,7 @@ contract AuraBribesProcessor is CowSwapSeller {
                 userData: new bytes(0)
             });
 
-            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, 0, block.number);
+            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, 0, type(uint256).max);
 
             ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 

@@ -24,7 +24,7 @@ def test_sell_bribes_for_weth_cant_sell_badger(setup_aura_processor, badger, wet
     setup_aura_processor.sellBribeForWeth(data, uid, {"from": manager})
 
 def test_sell_bribes_for_weth_cant_sell_aura(setup_aura_processor, weth, manager, aura):
-  sell_amount = 10000000000000000000
+  sell_amount = 10000000000000000000000
 
   order_details = get_cowswap_order(setup_aura_processor, aura, weth, sell_amount)
 

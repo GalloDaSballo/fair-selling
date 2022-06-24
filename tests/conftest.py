@@ -5,14 +5,19 @@ import pytest
 
 console = Console()
 
+MAX_INT = 2**256 - 1
 DEV_MULTI = "0xB65cef03b9B89f99517643226d76e286ee999e77"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
+BVE_AURA = "0xBA485b556399123261a5F9c95d413B4f93107407"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
 AURA_WHALE = "0x43B17088503F4CE1AED9fB302ED6BB51aD6694Fa"
+BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
+AURA_POOL_ID = "0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a"
+
 
 ## Contracts ##
 @pytest.fixture
@@ -31,6 +36,9 @@ def processor(pricer):
 def aura_processor(pricer):
     return AuraBribesProcessor.deploy(pricer, {"from": a[0]})
 
+@pytest.fixture
+def balancer_vault():
+  return interface.IBalancerVault(BALANCER_VAULT)
 
 @pytest.fixture
 def usdc():
@@ -85,6 +93,10 @@ def bve_aura(aura_processor):
   return interface.ERC20(aura_processor.BVE_AURA())
 
 @pytest.fixture
+def bve_aura_vault():
+  return interface.IVault(BVE_AURA)
+
+@pytest.fixture
 def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_whale, cvx_whale, bve_cvx):
   ## Do the donation / Transfer Bribes
   usdc.transfer(processor, 6e10, {"from": usdc_whale})
@@ -123,6 +135,30 @@ def setup_aura_processor(aura_processor, aura_strategy, usdc, usdc_whale, badger
 
   return aura_processor
 
+
+@pytest.fixture
+def make_aura_pool_unprofitable(balancer_vault, aura_whale, aura, bve_aura_vault, bve_aura):
+  # Buy AURA to make pool unprofitable
+
+  amount = 5e18
+  bve_aura.approve(BALANCER_VAULT, MAX_INT, {'from': aura_whale})
+
+  aura.approve(BVE_AURA, MAX_INT, {'from': aura_whale})
+  bve_aura_vault.deposit(amount, {'from': aura_whale})
+
+  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, amount, 0)
+  fund = (AURA_WHALE, False, AURA_WHALE, False)
+  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
+
+@pytest.fixture
+def make_aura_pool_profitable(balancer_vault, aura_whale, aura):
+  # Buy bveAURA to make pool profitable
+
+  amount = 5e18
+  aura.approve(BALANCER_VAULT, MAX_INT, {'from': aura_whale})
+  swap = (AURA_POOL_ID, 0, AURA, BVE_AURA, amount, 0)
+  fund = (AURA_WHALE, False, AURA_WHALE, False) 
+  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 
 
 @pytest.fixture
