@@ -2,7 +2,6 @@ import brownie
 from brownie import *
 from scripts.send_order import get_cowswap_order
 
-
 """
     swapAuraToBveAuraAndEmit
     Works for both LP and Buy
@@ -22,7 +21,7 @@ def test_swap_aura_and_emit_with_swap(setup_aura_processor, manager, aura, bve_a
   tx = setup_aura_processor.swapAURATobveAURAAndEmit({"from": manager})
   deposit_amount = tx.events['AuraDepositAmount']['amount']
   swap_amount = tx.events['AuraSwapAmount']['amount']
-  assert deposit_amount > swap_amount
+  assert swap_amount > deposit_amount
 
   assert bve_aura.balanceOf(setup_aura_processor.BADGER_TREE()) > bve_balance_before
   assert aura.balanceOf(setup_aura_processor.BADGER_TREE()) == 0 ## All aura has been emitted
@@ -43,11 +42,8 @@ def test_swap_aura_and_emit_with_deposit(setup_aura_processor, manager, aura, bv
   swap_amount = tx.events['AuraSwapAmount']['amount']
   assert deposit_amount > swap_amount
 
-
-
   assert bve_aura.balanceOf(setup_aura_processor.BADGER_TREE()) > bve_balance_before
   assert aura.balanceOf(setup_aura_processor.BADGER_TREE()) == 0 ## All aura has been emitted
-
 
   ## Reverts if called a second time
   with brownie.reverts():
