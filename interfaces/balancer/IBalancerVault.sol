@@ -92,6 +92,16 @@ interface IBalancerVault {
      *
      * Emits a `PoolBalanceChanged` event.
      */
+    function getPoolTokens(
+         bytes32 poolId
+    )
+    external
+    view
+    returns (
+        address[] memory tokens,
+        uint256[] memory balances,
+        uint256 lastChangeBlock
+    );
     function exitPool(
         bytes32 poolId,
         address sender,
