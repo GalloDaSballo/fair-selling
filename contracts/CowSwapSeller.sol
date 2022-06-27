@@ -25,6 +25,8 @@ enum SwapType {
 struct Quote {
     SwapType name;
     uint256 amountOut;
+    bytes32[] pools; // specific pools involved in the optimal swap path
+    uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
 }
 interface OnChainPricing {
   function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
