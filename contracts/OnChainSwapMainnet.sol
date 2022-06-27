@@ -107,7 +107,7 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(UNIV3_ROUTER, 0);
         IERC20(tokenIn).safeApprove(UNIV3_ROUTER, amountIn);
 		
-        _safeTransfeFrom(tokenIn, amountIn);
+        require(_checkTokenTransfer(tokenIn, amountIn), '!AMT');
 		
         ExactInputParams memory params = ExactInputParams({
                 path: abiEncodePackedPath,
@@ -137,7 +137,7 @@ contract OnChainSwapMainnet {
         IERC20(path[0]).safeApprove(router, 0);
         IERC20(path[0]).safeApprove(router, amountIn);
 		
-        _safeTransfeFrom(path[0], amountIn);
+        require(_checkTokenTransfer(path[0], amountIn), '!AMT');
 		
         uint256[] memory _amountsOut = IUniswapRouterV2(router).swapExactTokensForTokens(amountIn, expectedOut, path, receiver, block.timestamp);
         return _amountsOut[_amountsOut.length - 1];
@@ -148,7 +148,7 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(CURVE_ROUTER, 0);
         IERC20(tokenIn).safeApprove(CURVE_ROUTER, amountIn);
 		
-        _safeTransfeFrom(tokenIn, amountIn);
+        require(_checkTokenTransfer(tokenIn, amountIn), '!AMT');
 		
         return ICurveRouter(CURVE_ROUTER).exchange(pool, tokenIn, tokenOut, amountIn, expectedOut, receiver);
     }
@@ -158,7 +158,7 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, 0);
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, amountIn);
 		
-        _safeTransfeFrom(tokenIn, amountIn);
+        require(_checkTokenTransfer(tokenIn, amountIn), '!AMT');
 		
         SingleSwap memory singleSwap = SingleSwap(poolID, SwapKind.GIVEN_IN, tokenIn, tokenOut, amountIn, "");
         FundManagement memory funds = FundManagement(address(this), false, receiver, false);		
@@ -172,7 +172,7 @@ contract OnChainSwapMainnet {
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, 0);
         IERC20(tokenIn).safeApprove(BALANCERV2_VAULT, amountIn);
 		
-        _safeTransfeFrom(tokenIn, amountIn);
+        require(_checkTokenTransfer(tokenIn, amountIn), '!AMT');
 		
         address[] memory assets = new address[](3);
         assets[0] = tokenIn;
@@ -195,17 +195,10 @@ contract OnChainSwapMainnet {
         return uint256(0 - _deltas[_deltas.length - 1]);
     }
 	
-    /// @dev Transfer tokens from msg.sender to this contract
-    /// @dev msg.sender need to approve this contract in given token first
-    function _safeTransfeFrom(address token, uint256 value) internal {
-        uint256 _beforeVal = IERC20(token).balanceOf(address(this));
-		
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, msg.sender, address(this), value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'STF');
-		
-        uint256 _afterVal = IERC20(token).balanceOf(address(this));
-        uint256 _diff = _afterVal - _beforeVal;
-        require(_diff == value, 'STFdiff');// no support for tokens those charge tax upon transfer
+    /// @dev caller needs to 'push' the amount of token for swap to this contract
+    /// @return if token balance already in this contract satisfy expected given-in amount for the swap
+    function _checkTokenTransfer(address token, uint256 value) internal returns (bool){
+        return IERC20(token).balanceOf(address(this)) >= value;
     }
 
 }

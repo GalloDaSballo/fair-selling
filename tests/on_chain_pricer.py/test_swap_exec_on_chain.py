@@ -19,9 +19,7 @@ def test_swap_in_curve(oneE18, weth_whale, weth, crv, pricer, swapexecutor):
 
   ## swap on chain
   slippageTolerance = 0.95
-  weth.approve(swapexecutor.address, 0, {'from': weth_whale})
-  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
-  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  weth.transfer(swapexecutor.address, sell_amount, {'from': weth_whale})
   
   minOutput = quote[1] * slippageTolerance
   balBefore = crv.balanceOf(weth_whale)
@@ -46,9 +44,7 @@ def test_swap_in_univ2(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):
 
   ## swap on chain
   slippageTolerance = 0.95  
-  weth.approve(swapexecutor.address, 0, {'from': weth_whale})
-  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
-  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  weth.transfer(swapexecutor.address, sell_amount, {'from': weth_whale})
   
   minOutput = quote * slippageTolerance  
   balBefore = usdc.balanceOf(weth_whale)
@@ -70,10 +66,8 @@ def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecut
   assert quote >= p 
 
   ## swap on chain
-  slippageTolerance = 0.95
-  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
-  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
-  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
+  slippageTolerance = 0.95 
+  wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
   minOutput = quote * slippageTolerance   
   balBefore = usdc.balanceOf(wbtc_whale)
@@ -95,10 +89,8 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
   assert quote >= p 
 
   ## swap on chain
-  slippageTolerance = 0.95
-  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
-  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
-  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
+  slippageTolerance = 0.95 
+  wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
   minOutput = quote * slippageTolerance  
   ## encodedPath = swapexecutor.encodeUniV3TwoHop(wbtc.address, 500, weth.address, 500, usdc.address)   
@@ -122,9 +114,7 @@ def test_swap_in_balancer_batch(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, sw
 
   ## swap on chain
   slippageTolerance = 0.95
-  wbtc.approve(swapexecutor.address, 0, {'from': wbtc_whale})  
-  wbtc.approve(swapexecutor.address, sell_amount, {'from': wbtc_whale})
-  assert wbtc.allowance(wbtc_whale, swapexecutor.address) >= sell_amount
+  wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
   minOutput = quote[1] * slippageTolerance
   wbtc2WETHPoolId = '0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e'
@@ -148,10 +138,8 @@ def test_swap_in_balancer_single(oneE18, weth_whale, weth, usdc, pricer, swapexe
   assert quote[1] >= p 
 
   ## swap on chain
-  slippageTolerance = 0.95
-  weth.approve(swapexecutor.address, 0, {'from': weth_whale})  
-  weth.approve(swapexecutor.address, sell_amount, {'from': weth_whale})
-  assert weth.allowance(weth_whale, swapexecutor.address) >= sell_amount
+  slippageTolerance = 0.95  
+  weth.transfer(swapexecutor.address, sell_amount, {'from': weth_whale})
   
   minOutput = quote[1] * slippageTolerance
   weth2USDCPoolId = '0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019'   
