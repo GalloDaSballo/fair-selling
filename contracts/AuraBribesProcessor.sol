@@ -27,8 +27,8 @@ contract AuraBribesProcessor is CowSwapSeller {
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
     event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
-    event AuraDepositAmount(uint256 amount);
-    event AuraSwapAmount(uint256 amount);
+    event AuraDepositQuote(uint256 amount);
+    event AuraSwapQuote(uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -197,25 +197,25 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
         swaps[0] = batchSwapStep;
-        
-        int256 fromPurchase = BALANCER_VAULT.queryBatchSwap(
+        // Amount out is positive amount of second asset delta
+        int256[] memory assetDeltas = BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
             fundManagement
-        )[0];
+        );
+        uint256 fromPurchase = uint256(-assetDeltas[1]);
+        emit AuraSwapQuote(fromPurchase);
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
         uint256 fromDeposit = totalAURA * BVE_AURA.totalSupply() / BVE_AURA.balance();
-
-        emit AuraDepositAmount(fromDeposit);
-        emit AuraSwapAmount(uint256(fromPurchase));
+        emit AuraDepositQuote(fromDeposit);
 
         uint256 ops_fee;
         uint256 toEmit;
 
-        if(fromDeposit > uint256(fromPurchase)) {
+        if(fromDeposit > fromPurchase) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision

@@ -1,5 +1,6 @@
 from time import time
 from brownie import *
+import eth_abi
 from rich.console import Console
 import pytest
 
@@ -122,43 +123,46 @@ def setup_aura_processor(aura_processor, aura_strategy, usdc, usdc_whale, badger
   usdc.transfer(aura_processor, 6e10, {"from": usdc_whale})
 
   ## Also transfer some BADGER and Aura for later processing
-  aura.transfer(aura_processor, 3e22, {"from": aura_whale})
+  aura.transfer(aura_processor, 1e18, {"from": aura_whale})
 
   badger.transfer(aura_processor, 6e22, {"from": badger_whale})
-
-  ## Also approve contract access from bveaura
-  #interface.ISettV4(bve_aura_sett.approveContractAccess(aura_processor, {"from": accounts.at(interface.ISettV4(bve_aura).governance(), force=True)})
-
 
   ## Notify new round, 28 days before anyone can unlock tokens
   aura_processor.notifyNewRound({"from": aura_strategy})
 
   return aura_processor
 
-
 @pytest.fixture
-def make_aura_pool_unprofitable(balancer_vault, aura_whale, aura, bve_aura_vault, bve_aura):
-  # Buy AURA to make pool unprofitable
+def add_aura_liquidity_and_approve(balancer_vault, aura_whale, aura, bve_aura, bve_aura_vault):
+  liquidity_amount = int(5000e18)
+  account = {'from': aura_whale}
+  bve_aura.approve(BALANCER_VAULT, MAX_INT, account)
+  aura.approve(BALANCER_VAULT, MAX_INT, account)
+  aura.approve(BVE_AURA, MAX_INT, account)
+  bve_aura_vault.deposit(liquidity_amount, account)
+  join_kind = 1
+  balances = [liquidity_amount, liquidity_amount]
+  abi = ['uint256', 'uint256[]', 'uint256']
+  user_data = [join_kind, balances, 0]
+  user_data_encoded = eth_abi.encode_abi(abi, user_data)
+  join_request = ([BVE_AURA, AURA], balances, user_data_encoded, False)
+  balancer_vault.joinPool(AURA_POOL_ID, AURA_WHALE, AURA_WHALE, join_request, account)  
 
-  amount = 5e18
-  bve_aura.approve(BALANCER_VAULT, MAX_INT, {'from': aura_whale})
-
-  aura.approve(BVE_AURA, MAX_INT, {'from': aura_whale})
-  bve_aura_vault.deposit(amount, {'from': aura_whale})
-
-  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, amount, 0)
+      
+@pytest.fixture
+def make_aura_pool_unprofitable(balancer_vault, aura_whale, bve_aura_vault, add_aura_liquidity_and_approve):
+  amount = 1000e18
+  swap = (AURA_POOL_ID, 0, AURA, BVE_AURA, amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False)
   balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 
 @pytest.fixture
-def make_aura_pool_profitable(balancer_vault, aura_whale, aura):
-  # Buy bveAURA to make pool profitable
-
-  amount = 5e18
-  aura.approve(BALANCER_VAULT, MAX_INT, {'from': aura_whale})
-  swap = (AURA_POOL_ID, 0, AURA, BVE_AURA, amount, 0)
+def make_aura_pool_profitable(balancer_vault, aura_whale, aura, add_aura_liquidity_and_approve, bve_aura_vault):
+  amount = 2000e18
+  bve_aura_vault.deposit(amount * 4, {'from': aura_whale})
+  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False) 
-  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
+  data = balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale}).return_value
 
 
 @pytest.fixture

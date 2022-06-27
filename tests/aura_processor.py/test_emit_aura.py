@@ -19,9 +19,9 @@ def test_swap_aura_and_emit_with_swap(setup_aura_processor, manager, aura, bve_a
   assert aura.balanceOf(setup_aura_processor) > 0
 
   tx = setup_aura_processor.swapAURATobveAURAAndEmit({"from": manager})
-  deposit_amount = tx.events['AuraDepositAmount']['amount']
-  swap_amount = tx.events['AuraSwapAmount']['amount']
-  assert swap_amount > deposit_amount
+  deposit_quote = tx.events['AuraDepositQuote']['amount']
+  swap_quote = tx.events['AuraSwapQuote']['amount']
+  assert swap_quote > deposit_quote
 
   assert bve_aura.balanceOf(setup_aura_processor.BADGER_TREE()) > bve_balance_before
   assert aura.balanceOf(setup_aura_processor.BADGER_TREE()) == 0 ## All aura has been emitted
@@ -38,9 +38,9 @@ def test_swap_aura_and_emit_with_deposit(setup_aura_processor, manager, aura, bv
   assert aura.balanceOf(setup_aura_processor) > 0
 
   tx = setup_aura_processor.swapAURATobveAURAAndEmit({"from": manager})
-  deposit_amount = tx.events['AuraDepositAmount']['amount']
-  swap_amount = tx.events['AuraSwapAmount']['amount']
-  assert deposit_amount > swap_amount
+  deposit_quote = tx.events['AuraDepositQuote']['amount']
+  swap_quote = tx.events['AuraSwapQuote']['amount']
+  assert deposit_quote > swap_quote
 
   assert bve_aura.balanceOf(setup_aura_processor.BADGER_TREE()) > bve_balance_before
   assert aura.balanceOf(setup_aura_processor.BADGER_TREE()) == 0 ## All aura has been emitted
