@@ -13,7 +13,7 @@ from scripts.send_order import get_cowswap_order
     Emits event
 """
 
-def test_swap_cvx_and_emit_with_purchase(setup_processor, manager, bve_cvx, cvx, make_pool_profitable):
+def test_swap_cvx_and_emit_with_purchase(setup_processor, manager, bve_cvx, cvx, make_cvx_pool_profitable):
   bve_balance_before = bve_cvx.balanceOf(setup_processor.BADGER_TREE())
   assert cvx.balanceOf(setup_processor) > 0
 
@@ -30,7 +30,7 @@ def test_swap_cvx_and_emit_with_purchase(setup_processor, manager, bve_cvx, cvx,
   with brownie.reverts():
     setup_processor.swapCVXTobveCVXAndEmit({"from": manager})
     
-def test_swap_cvx_and_emit_with_deposit(setup_processor, manager, bve_cvx, cvx, make_pool_unprofitable):
+def test_swap_cvx_and_emit_with_deposit(setup_processor, manager, bve_cvx, cvx, make_cvx_pool_unprofitable):
   bve_balance_before = bve_cvx.balanceOf(setup_processor.BADGER_TREE())
   assert cvx.balanceOf(setup_processor) > 0
 

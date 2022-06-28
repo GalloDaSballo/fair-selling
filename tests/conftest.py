@@ -135,13 +135,15 @@ def setup_aura_processor(aura_processor, aura_strategy, usdc, usdc_whale, badger
   return aura_processor
 
 @pytest.fixture
-def add_aura_liquidity_and_approve(balancer_vault, aura_whale, aura, bve_aura):
+def add_aura_liquidity(balancer_vault, aura_whale, aura, bve_aura):
+  # Add extra liquidity to meta stable pool to improve pricing
   liquidity_amount = int(6000e18)
   account = {'from': aura_whale}
   bve_aura.approve(BALANCER_VAULT, MAX_INT, account)
   aura.approve(BALANCER_VAULT, MAX_INT, account)
   aura.approve(BVE_AURA, MAX_INT, account)
   interface.IVault(BVE_AURA).deposit(liquidity_amount, account)
+  liquidity_amount = bve_aura.balanceOf(AURA_WHALE)
   join_kind = 1
   balances = [liquidity_amount, liquidity_amount]
   abi = ['uint256', 'uint256[]', 'uint256']
@@ -149,44 +151,41 @@ def add_aura_liquidity_and_approve(balancer_vault, aura_whale, aura, bve_aura):
   user_data_encoded = eth_abi.encode_abi(abi, user_data)
   join_request = ([BVE_AURA, AURA], balances, user_data_encoded, False)
   balancer_vault.joinPool(AURA_POOL_ID, AURA_WHALE, AURA_WHALE, join_request, account)  
-
       
 @pytest.fixture
-def make_aura_pool_unprofitable(balancer_vault, aura_whale,  add_aura_liquidity_and_approve):
+def make_aura_pool_unprofitable(balancer_vault, aura_whale, add_aura_liquidity):
+  # Buy BVE_AURA to imbalance pool
   pool_purchase_amount = balancer_vault.getPoolTokens(AURA_POOL_ID)[1][0]
   swap = (AURA_POOL_ID, 0, AURA, BVE_AURA, pool_purchase_amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False)
   balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 
 @pytest.fixture
-def make_aura_pool_profitable(balancer_vault, aura_whale, add_aura_liquidity_and_approve):
+def make_aura_pool_profitable(balancer_vault, aura_whale, add_aura_liquidity, bve_aura):
+  # Buy AURA to imbalance pool
   pool_purchase_amount = balancer_vault.getPoolTokens(AURA_POOL_ID)[1][1]
   interface.IVault(BVE_AURA).deposit(pool_purchase_amount, {'from': aura_whale})
-  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, pool_purchase_amount, 0)
+  deposit_amount = bve_aura.balanceOf(AURA_WHALE)
+  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, deposit_amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False) 
-  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale}).return_value
+  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 
 @pytest.fixture
-def make_pool_profitable(cvx, bve_cvx, cvx_bvecvx_pool, cvx_whale):
+def make_cvx_pool_profitable(cvx, bve_cvx, cvx_bvecvx_pool, cvx_whale):
   cvx_balance = cvx.balanceOf(CVX_BVECVX_POOL)
-  bvecvx_balance = bve_cvx.balanceOf(CVX_BVECVX_POOL)
-  if cvx_balance / bvecvx_balance <= 1: # [cvx, bvecvx]
-    whale = {'from': cvx_whale}
-    pool_purchase_amount = bve_cvx.balanceOf(CVX_BVECVX_POOL) / 4
-    cvx.approve(BVE_CVX, MAX_INT, whale)
-    interface.IVault(BVE_CVX).deposit(cvx_balance, whale)
-    
-    bve_cvx.approve(CVX_BVECVX_POOL, MAX_INT, whale)
-    cvx_bvecvx_pool.exchange(1, 0, pool_purchase_amount, 0, whale)
-  
+  whale = {'from': cvx_whale}
+  cvx.approve(BVE_CVX, MAX_INT, whale)
+  interface.IVault(BVE_CVX).deposit(cvx_balance, whale)
+  deposit_amount = bve_cvx.balanceOf(CVX_WHALE)
+  print(deposit_amount)
+  bve_cvx.approve(CVX_BVECVX_POOL, MAX_INT, whale)
+  cvx_bvecvx_pool.exchange(1, 0, deposit_amount, 0, whale)
 
 @pytest.fixture
-def make_pool_unprofitable(cvx, bve_cvx, cvx_bvecvx_pool, cvx_whale):
-  cvx_balance = cvx.balanceOf(CVX_BVECVX_POOL)
+def make_cvx_pool_unprofitable(cvx, bve_cvx, cvx_bvecvx_pool, cvx_whale):
   bvecvx_balance = bve_cvx.balanceOf(CVX_BVECVX_POOL)
-  if cvx_balance / bvecvx_balance <= 1: # [cvx, bvecvx]
-    cvx.approve(CVX_BVECVX_POOL, MAX_INT, {'from': cvx_whale})
-    cvx_bvecvx_pool.exchange(0, 1, bvecvx_balance, 0, {'from': cvx_whale})
+  cvx.approve(CVX_BVECVX_POOL, MAX_INT, {'from': cvx_whale})
+  cvx_bvecvx_pool.exchange(0, 1, bvecvx_balance, 0, {'from': cvx_whale})
 
 @pytest.fixture
 def badger(processor):
