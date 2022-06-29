@@ -143,8 +143,8 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// Step 2.a
     /// Swap WETH -> BADGER
     function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
-        require(orderData.sellToken == WETH);
-        require(orderData.buyToken == BADGER);
+        require(orderData.sellToken == WETH); // Must Sell WETH
+        require(orderData.buyToken == BADGER); // Must Buy BADGER
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
@@ -154,8 +154,8 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// Step 2.b
     /// Swap WETH -> AURA
     function swapWethForAURA(Data calldata orderData, bytes memory orderUid) external {
-        require(orderData.sellToken == WETH);
-        require(orderData.buyToken == AURA);
+        require(orderData.sellToken == WETH); // Must Sell WETH
+        require(orderData.buyToken == AURA); // Must buy AURA
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
