@@ -28,7 +28,7 @@ AURA_POOL_ID = "0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a0002000000000000000002
 CVX_BVECVX_POOL = "0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512"
 
 
-## Contracts ##
+## Contracts ##  
 @pytest.fixture
 def pricer():
   return OnChainPricingMainnet.deploy({"from": a[0]})
@@ -102,8 +102,17 @@ def aura_whale():
   return accounts.at(AURA_WHALE, force=True)
 
 @pytest.fixture
+def wbtc_whale():
+  return accounts.at(WBTC_WHALE, force=True)
+
+@pytest.fixture
 def manager(seller):
   return accounts.at(seller.manager(), force=True)
+  
+@pytest.fixture
+def cowprocessor(manager, pricer):
+  CowSwapValidation.deploy({"from": manager})
+  return CowSwapProcessor.deploy(pricer, {"from": manager})
 
 @pytest.fixture
 def strategy(processor):

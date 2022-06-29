@@ -11,6 +11,11 @@ DEV_MULTI = "0xB65cef03b9B89f99517643226d76e286ee999e77"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
+## keccak256("sell")
+KIND_KILL = '0xf3b277728b3fee749481eb3e0b3b48980dbbab78658fc419025cb16eee346775'
+## keccak256("erc20")
+BALANCE_ERC20 = '0x5a28e9363bb942b639270062aa6bb295f434bcdfc42c97267bf003f272060dc9'
+
 def main():
     pricer = OnChainPricingMainnet.deploy({"from": a[0]})
 
@@ -22,10 +27,19 @@ def main():
     amount = 1000000000000000000
 
     cowswap_sell_demo(c, weth, usdc, amount, a[0])
-
+    
 def get_cowswap_order(contract, sell_token, buy_token, amount_in):
     """
         Get quote, place order and return orderData as well as orderUid
+    """
+    receiver = contract.address
+    validTo = chain.time()
+    appData = "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24" # maps to https://bafybeiblq2ko2maieeuvtbzaqyhi5fzpa6vbbwnydsxbnsqoft5si5b6eq.ipfs.dweb.link
+    return get_cowswap_order_with_receiver_deadline_appdata(contract, sell_token, buy_token, amount_in, receiver, validTo, appData)
+
+def get_cowswap_order_with_receiver_deadline_appdata(contract, sell_token, buy_token, amount_in, receiver, validTo, appData):
+    """
+        Get quote with specific receiver/deadline/appData, place order and return orderData as well as orderUid
     """
     amount =    amount_in
 
@@ -46,7 +60,7 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
     assert fee_amount > 0
     assert buy_amount_after_fee > 0
 
-    deadline = chain.time() + 60*60*1 # 1 hour
+    deadline = validTo + 60*60*1 # plus 1 hour
 
     # Submit order
     order_payload = {
@@ -55,11 +69,11 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
         "sellAmount": str(amount-fee_amount), # amount that we have minus the fee we have to pay
         "buyAmount": str(buy_amount_after_fee), # buy amount fetched from the previous call
         "validTo": deadline,
-        "appData": "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24", # maps to https://bafybeiblq2ko2maieeuvtbzaqyhi5fzpa6vbbwnydsxbnsqoft5si5b6eq.ipfs.dweb.link
+        "appData": appData,
         "feeAmount": str(fee_amount),
         "kind": "sell",
         "partiallyFillable": False,
-        "receiver": contract.address,
+        "receiver": receiver,
         "signature": contract.address,
         "from": contract.address,
         "sellTokenBalance": "erc20",
@@ -68,24 +82,24 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
     }
     orders_url = f"https://api.cow.fi/mainnet/api/v1/orders"
     r = requests.post(orders_url, json=order_payload)
+    print(f"Response: {r} and Payload: {order_payload}")
     assert r.ok and r.status_code == 201
     order_uid = r.json()
-    print(f"Payload: {order_payload}")
     print(f"Order uid: {order_uid}")
     
     order_data = [
         sell_token.address, 
         buy_token.address, 
-        contract.address, 
+        receiver, 
         amount-fee_amount,
         buy_amount_after_fee,
         deadline,
-        "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24",
+        appData,
         fee_amount,
-        contract.KIND_SELL(),
+        KIND_KILL,
         False,
-        contract.BALANCE_ERC20(),
-        contract.BALANCE_ERC20()
+        BALANCE_ERC20,
+        BALANCE_ERC20
     ]
 
     return DotMap(
@@ -93,16 +107,16 @@ def get_cowswap_order(contract, sell_token, buy_token, amount_in):
         order_uid=order_uid,
         sellToken=sell_token.address,
         buyToken=buy_token.address,
-        receiver=contract.address,
+        receiver=receiver,
         sellAmount=amount-fee_amount,
         buyAmount=buy_amount_after_fee,
         validTo=deadline,
-        appData="0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24",
+        appData=appData,
         feeAmount=fee_amount,
-        kind=contract.KIND_SELL(),
+        kind=KIND_KILL,
         partiallyFillable=False,
-        sellTokenBalance=contract.BALANCE_ERC20(),
-        buyTokenBalance=contract.BALANCE_ERC20()
+        sellTokenBalance=BALANCE_ERC20,
+        buyTokenBalance=BALANCE_ERC20
     )
 
 
