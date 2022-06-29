@@ -27,8 +27,6 @@ contract AuraBribesProcessor is CowSwapSeller {
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
     event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
-    event AuraDepositQuote(uint256 amount);
-    event AuraSwapQuote(uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -205,16 +203,13 @@ contract AuraBribesProcessor is CowSwapSeller {
             fundManagement
         );
         uint256 fromPurchase = uint256(-assetDeltas[1]);
-        emit AuraSwapQuote(fromPurchase);
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
         uint256 fromDeposit = totalAURA * BVE_AURA.totalSupply() / BVE_AURA.balance();
-        emit AuraDepositQuote(fromDeposit);
 
         uint256 ops_fee;
         uint256 toEmit;
-
         if(fromDeposit > fromPurchase) {
             // Costs less to deposit
 

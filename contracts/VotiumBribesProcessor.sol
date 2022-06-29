@@ -26,8 +26,6 @@ contract VotiumBribesProcessor is CowSwapSeller {
     event SentBribeToTree(address indexed token, uint256 amount);
     event PerformanceFeeGovernance(address indexed token, uint256 amount);
     event BribeEmission(address indexed token, address indexed recipient, uint256 amount);
-    event CvxDepositQuote(uint256 amount);
-    event CvxSwapQuote(uint256 amount);
 
     // address public manager /// inherited by CowSwapSeller
 
@@ -172,16 +170,13 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
         // Get quote from pool
         uint256 fromPurchase = CVX_BVE_CVX_CURVE.get_dy(0, 1, totalCVX);
-        emit CvxSwapQuote(fromPurchase);
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
         uint256 fromDeposit = totalCVX * BVE_CVX.totalSupply() / BVE_CVX.balance();
-        emit CvxDepositQuote(fromDeposit);
 
         uint256 ops_fee;
         uint256 toEmit;
-
         if(fromDeposit > fromPurchase) {
             // Costs less to deposit
 

@@ -177,7 +177,6 @@ def make_cvx_pool_profitable(cvx, bve_cvx, cvx_bvecvx_pool, cvx_whale):
   cvx.approve(BVE_CVX, MAX_INT, whale)
   interface.IVault(BVE_CVX).deposit(cvx_balance, whale)
   deposit_amount = bve_cvx.balanceOf(CVX_WHALE)
-  print(deposit_amount)
   bve_cvx.approve(CVX_BVECVX_POOL, MAX_INT, whale)
   cvx_bvecvx_pool.exchange(1, 0, deposit_amount, 0, whale)
 
