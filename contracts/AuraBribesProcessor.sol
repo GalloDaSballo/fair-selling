@@ -246,7 +246,7 @@ contract AuraBribesProcessor is CowSwapSeller {
                 userData: new bytes(0)
             });
 
-            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, fromPurchase, type(uint256).max);
+            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, fromPurchase, block.timestamp);
 
             ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
