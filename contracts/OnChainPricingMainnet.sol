@@ -11,6 +11,7 @@ import {Address} from "@oz/utils/Address.sol";
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
+import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 
 /// @title OnChainPricing
@@ -39,6 +40,45 @@ contract OnChainPricingMainnet {
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
     uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000];
+	
+    // BalancerV2 Vault
+    address public constant BALANCERV2_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
+    bytes32 public constant BALANCERV2_NONEXIST_POOLID = "BALANCER-V2-NON-EXIST-POOLID";
+    // selected Balancer V2 pools for given pairs on Ethereum with liquidity > $5M: https://dev.balancer.fi/references/subgraphs#examples
+    bytes32 public constant BALANCERV2_WSTETH_WETH_POOLID = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
+    address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
+    bytes32 public constant BALANCERV2_WBTC_WETH_POOLID = 0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e;
+    address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    bytes32 public constant BALANCERV2_USDC_WETH_POOLID = 0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    bytes32 public constant BALANCERV2_BAL_WETH_POOLID = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
+    address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
+    bytes32 public constant BALANCERV2_FEI_WETH_POOLID = 0x90291319f1d4ea3ad4db0dd8fe9e12baf749e84500020000000000000000013c;
+    address public constant FEI = 0x956F47F50A910163D8BF957Cf5846D573E7f87CA;
+    bytes32 public constant BALANCERV2_BADGER_WBTC_POOLID = 0xb460daa847c45f1c4a41cb05bfb3b51c92e41b36000200000000000000000194;
+    address public constant BADGER = 0x3472A5A71965499acd81997a54BBA8D852C6E53d;
+    bytes32 public constant BALANCERV2_GNO_WETH_POOLID = 0xf4c0dd9b82da36c07605df83c8a416f11724d88b000200000000000000000026;
+    address public constant GNO = 0x6810e776880C02933D47DB1b9fc05908e5386b96;
+    bytes32 public constant BALANCERV2_CREAM_WETH_POOLID = 0x85370d9e3bb111391cc89f6de344e801760461830002000000000000000001ef;
+    address public constant CREAM = 0x2ba592F78dB6436527729929AAf6c908497cB200;	
+    bytes32 public constant BALANCERV2_LDO_WETH_POOLID = 0xbf96189eee9357a95c7719f4f5047f76bde804e5000200000000000000000087;
+    address public constant LDO = 0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32;	
+    bytes32 public constant BALANCERV2_SRM_WETH_POOLID = 0x231e687c9961d3a27e6e266ac5c433ce4f8253e4000200000000000000000023;
+    address public constant SRM = 0x476c5E26a75bd202a9683ffD34359C0CC15be0fF;	
+    bytes32 public constant BALANCERV2_rETH_WETH_POOLID = 0x1e19cf2d73a72ef1332c882f20534b6519be0276000200000000000000000112;
+    address public constant rETH = 0xae78736Cd615f374D3085123A210448E74Fc6393;	
+    bytes32 public constant BALANCERV2_AKITA_WETH_POOLID = 0xc065798f227b49c150bcdc6cdc43149a12c4d75700020000000000000000010b;
+    address public constant AKITA = 0x3301Ee63Fb29F863f2333Bd4466acb46CD8323E6;	
+    bytes32 public constant BALANCERV2_OHM_DAI_WETH_POOLID = 0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e;
+    address public constant OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
+    address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    bytes32 public constant BALANCERV2_COW_GNO_POOLID = 0x92762b42a06dcdddc5b7362cfb01e631c4d44b40000200000000000000000182;
+    address public constant COW = 0xDEf1CA1fb7FBcDC777520aa7f396b4E015F497aB;
+    bytes32 public constant BALANCERV2_AURA_WETH_POOLID = 0xc29562b045d80fd77c69bec09541f5c16fe20d9d000200000000000000000251;
+    address public constant AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
+    bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
+    address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
+    address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
 
     struct Quote {
         string name;
@@ -48,7 +88,7 @@ contract OnChainPricingMainnet {
     /// @dev View function for testing the routing of the strategy
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
-        uint256 length = wethInvolved? 4 : 5; // Add length you need
+        uint256 length = wethInvolved? 5 : 7; // Add length you need
 
         Quote[] memory quotes = new Quote[](length);
 
@@ -64,13 +104,16 @@ contract OnChainPricingMainnet {
         uint256 univ3Quote = getUniV3Price(tokenIn, amountIn, tokenOut);
         quotes[3] = Quote("uniV3", univ3Quote);
 
+        uint256 balancerQuote = getBalancerPrice(tokenIn, amountIn, tokenOut);
+        quotes[4] = Quote("balancer", balancerQuote);
+
         if(!wethInvolved){
             uint256 univ3WithWETHQuote = getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
-            quotes[4] = Quote("uniV3WithWETH", univ3WithWETHQuote);		
-        }
-
-        /// TODO: Add Balancer
-        
+            quotes[5] = Quote("uniV3WithWETH", univ3WithWETHQuote);	
+			
+            uint256 balancerWithWETHQuote = getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
+            quotes[6] = Quote("balancerWithWETH", balancerWithWETHQuote);		
+        }        
 
         // Because this is a generalized contract, it is best to just loop,
         // Ideally we have a hierarchy for each chain to save some extra gas, but I think it's ok
@@ -224,6 +267,95 @@ contract OnChainPricingMainnet {
     function _getUniV3PoolAddress(address token0, address token1, uint24 fee) internal pure returns (address) {
         bytes32 addr = keccak256(abi.encodePacked(hex'ff', UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
         return address(uint160(uint256(addr)));
+    }
+	
+    /// @dev Given the input/output token, returns the quote for input amount from Balancer V2
+    function getBalancerPrice(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) { 
+        bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
+        if (poolId == BALANCERV2_NONEXIST_POOLID){
+            return 0;
+        }
+		
+        address[] memory assets = new address[](2);
+        assets[0] = tokenIn;
+        assets[1] = tokenOut;
+		
+        BatchSwapStep[] memory swaps = new BatchSwapStep[](1);
+        swaps[0] = BatchSwapStep(poolId, 0, 1, amountIn, "");
+		
+        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
+		
+        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
+
+        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
+        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
+    }
+	
+    /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2
+    function getBalancerPriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) { 
+        bytes32 firstPoolId = getBalancerV2Pool(tokenIn, connectorToken);
+        if (firstPoolId == BALANCERV2_NONEXIST_POOLID){
+            return 0;
+        }
+        bytes32 secondPoolId = getBalancerV2Pool(connectorToken, tokenOut);
+        if (secondPoolId == BALANCERV2_NONEXIST_POOLID){
+            return 0;
+        }
+		
+        address[] memory assets = new address[](3);
+        assets[0] = tokenIn;
+        assets[1] = connectorToken;
+        assets[2] = tokenOut;
+		
+        BatchSwapStep[] memory swaps = new BatchSwapStep[](2);
+        swaps[0] = BatchSwapStep(firstPoolId, 0, 1, amountIn, "");
+        swaps[1] = BatchSwapStep(secondPoolId, 1, 2, 0, "");// amount == 0 means use all from previous step
+		
+        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
+		
+        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
+
+        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
+        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
+    }
+	
+    /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
+    function getBalancerV2Pool(address tokenIn, address tokenOut) public view returns(bytes32){
+        if ((tokenIn == WETH && tokenOut == CREAM) || (tokenOut == WETH && tokenIn == CREAM)){
+            return BALANCERV2_CREAM_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == GNO) || (tokenOut == WETH && tokenIn == GNO)){
+            return BALANCERV2_GNO_WETH_POOLID;
+        } else if ((tokenIn == WBTC && tokenOut == BADGER) || (tokenOut == WBTC && tokenIn == BADGER)){
+            return BALANCERV2_BADGER_WBTC_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == FEI) || (tokenOut == WETH && tokenIn == FEI)){
+            return BALANCERV2_FEI_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == BAL) || (tokenOut == WETH && tokenIn == BAL)){
+            return BALANCERV2_BAL_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == USDC) || (tokenOut == WETH && tokenIn == USDC)){
+            return BALANCERV2_USDC_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == WBTC) || (tokenOut == WETH && tokenIn == WBTC)){
+            return BALANCERV2_WBTC_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == WSTETH) || (tokenOut == WETH && tokenIn == WSTETH)){
+            return BALANCERV2_WSTETH_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == LDO) || (tokenOut == WETH && tokenIn == LDO)){
+            return BALANCERV2_LDO_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == SRM) || (tokenOut == WETH && tokenIn == SRM)){
+            return BALANCERV2_SRM_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == rETH) || (tokenOut == WETH && tokenIn == rETH)){
+            return BALANCERV2_rETH_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == AKITA) || (tokenOut == WETH && tokenIn == AKITA)){
+            return BALANCERV2_AKITA_WETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == OHM) || (tokenOut == WETH && tokenIn == OHM) || (tokenIn == DAI && tokenOut == OHM) || (tokenOut == DAI && tokenIn == OHM)){
+            return BALANCERV2_OHM_DAI_WETH_POOLID;
+        } else if ((tokenIn == GNO && tokenOut == COW) || (tokenOut == COW && tokenIn == GNO)){
+            return BALANCERV2_COW_GNO_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == AURA) || (tokenOut == WETH && tokenIn == AURA)){
+            return BALANCERV2_AURA_WETH_POOLID;
+        } else if ((tokenIn == BALWETHBPT && tokenOut == AURABAL) || (tokenOut == BALWETHBPT && tokenIn == AURABAL)){
+            return BALANCERV2_AURABAL_BALWETH_POOLID;
+        } else{
+            return BALANCERV2_NONEXIST_POOLID;
+        }		
     }
 
     // TODO: Consider adding a `bool` check for `isWeth` to skip the weth check (as it's computed above)
