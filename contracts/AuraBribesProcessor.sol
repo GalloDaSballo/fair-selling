@@ -4,20 +4,21 @@ pragma solidity 0.8.10;
 
 import {ICurvePool} from "../interfaces/curve/ICurvePool.sol";
 import {IHarvestForwarder} from "../interfaces/badger/IHarvestForwarder.sol";
-import {ISettV4} from "../interfaces/badger/ISettV4.sol";
+import {IVault} from "../interfaces/badger/IVault.sol";
+import {IBalancerVault} from "../interfaces/balancer/IBalancerVault.sol";
+import {IAsset} from "../interfaces/balancer/IAsset.sol";
 import {CowSwapSeller} from "./CowSwapSeller.sol";
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 
-/// @title BribesProcessor
-/// @author Alex the Entreprenerd @ BadgerDAO
-/// @dev BribesProcess for bveCVX, using CowSwapSeller allows to process bribes fairly
+/// @title AuraBribesProcessor
+/// @author Swole @ BadgerDAO
+/// @dev BribesProcess for bveAura, using CowSwapSeller allows to process bribes fairly
 /// Minimizing the amount of power that the manager can have
-/// @notice This code is WIP, any feedback is appreciated alex@badger.finance
-///     Architecture: https://miro.com/app/board/uXjVO9yyd7o=/
-///     Original Python Version https://github.com/Badger-Finance/badger-multisig/blob/main/scripts/badger/swap_bribes_for_bvecvx.py#L39
-contract VotiumBribesProcessor is CowSwapSeller {
+/// @notice This code is forked from the VotiumBribesProcessor
+///     Original Version: https://github.com/GalloDaSballo/fair-selling/blob/main/contracts/VotiumBribesProcessor.sol
+contract AuraBribesProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
 
@@ -39,12 +40,11 @@ contract VotiumBribesProcessor is CowSwapSeller {
     // Way more time than expected
 
     IERC20 public constant BADGER = IERC20(0x3472A5A71965499acd81997a54BBA8D852C6E53d);
-    IERC20 public constant CVX = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    IERC20 public constant AURA = IERC20(0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF);
     IERC20 public constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
-    address public constant STRATEGY = 0x898111d1F4eB55025D0036568212425EE2274082;
+    address public constant STRATEGY = 0x3c0989eF27e3e3fAb87a2d7C38B35880C90E63b5;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
-    address public constant B_BVECVX_CVX = 0x937B8E917d0F36eDEBBA8E459C5FB16F3b315551;
 
     uint256 public constant MAX_BPS = 10_000;
     uint256 public constant BADGER_SHARE = 2750; //27.50%
@@ -55,8 +55,12 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
     address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
 
-    ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
-    ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
+    IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
+
+    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a;
+
+    IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
+
 
     // We send tokens to emit here
     IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
@@ -111,7 +115,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
                 amount -= fee;
             }
             token.safeApprove(address(HARVEST_FORWARDER), amount);
-            HARVEST_FORWARDER.distribute(address(token), amount, address(BVE_CVX));
+            HARVEST_FORWARDER.distribute(address(token), amount, address(BVE_AURA));
 
             emit SentBribeToTree(address(token), amount);
         }
@@ -125,7 +129,7 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// To sell all bribes to WETH
     /// @notice nonReentrant not needed as `_doCowswapOrder` is nonReentrant
     function sellBribeForWeth(Data calldata orderData, bytes memory orderUid) external {
-        require(orderData.sellToken != CVX); // Can't sell CVX;
+        require(orderData.sellToken != AURA); // Can't sell AURA;
         require(orderData.sellToken != BADGER); // Can't sell BADGER either;
         require(orderData.sellToken != WETH); // Can't sell WETH
         require(orderData.buyToken == WETH); // Gotta Buy WETH;
@@ -137,8 +141,8 @@ contract VotiumBribesProcessor is CowSwapSeller {
     /// Step 2.a
     /// Swap WETH -> BADGER
     function swapWethForBadger(Data calldata orderData, bytes memory orderUid) external {
-        require(orderData.sellToken == WETH);
-        require(orderData.buyToken == BADGER);
+        require(orderData.sellToken == WETH); // Must Sell WETH
+        require(orderData.buyToken == BADGER); // Must Buy BADGER
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
@@ -146,34 +150,63 @@ contract VotiumBribesProcessor is CowSwapSeller {
 
     /// @dev
     /// Step 2.b
-    /// Swap WETH -> CVX
-    function swapWethForCVX(Data calldata orderData, bytes memory orderUid) external {
-        require(orderData.sellToken == WETH);
-        require(orderData.buyToken == CVX);
+    /// Swap WETH -> AURA
+    function swapWethForAURA(Data calldata orderData, bytes memory orderUid) external {
+        require(orderData.sellToken == WETH); // Must Sell WETH
+        require(orderData.buyToken == AURA); // Must buy AURA
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
     }
 
     /// @dev
-    /// Step 3 Emit the CVX
-    /// Takes all the CVX, takes fee, locks and emits it
-    function swapCVXTobveCVXAndEmit() external nonReentrant {
-        // Will take all the CVX left,
-        // swap it for bveCVX if cheaper, or deposit it directly
+    /// Step 3 Emit the Aura
+    /// Takes all the Aura, takes fee, locks and emits it
+    function swapAURATobveAURAAndEmit() external nonReentrant {
+        // Will take all the Aura left,
+        // swap it for bveAura if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
 
-        uint256 totalCVX = CVX.balanceOf(address(this));
-        require(totalCVX > 0);
+        uint256 totalAURA = AURA.balanceOf(address(this));
+        require(totalAURA > 0);
         require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
-        // Get quote from pool
-        uint256 fromPurchase = CVX_BVE_CVX_CURVE.get_dy(0, 1, totalCVX);
+        // Get quote from balancer pool using queryBatchSwap
+
+        IBalancerVault.FundManagement memory fundManagement = IBalancerVault.FundManagement({
+            sender: address(this),
+            fromInternalBalance: false,
+            recipient: payable(address(this)),
+            toInternalBalance: false
+        });
+
+        IAsset[] memory assets = new IAsset[](2);
+        assets[0] = IAsset(address(AURA));
+        assets[1] = IAsset(address(BVE_AURA));
+
+        IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
+            poolId: AURA_BVEAURA_POOL_ID,
+            assetInIndex: 0,
+            assetOutIndex: 1,
+            amount: totalAURA,
+            userData: new bytes(0)
+        });
+
+        IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
+        swaps[0] = batchSwapStep;
+        // Amount out is positive amount of second asset delta
+        int256[] memory assetDeltas = BALANCER_VAULT.queryBatchSwap(
+            IBalancerVault.SwapKind.GIVEN_IN,
+            swaps,
+            assets,
+            fundManagement
+        );
+        uint256 fromPurchase = uint256(-assetDeltas[1]);
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
-        uint256 fromDeposit = totalCVX * BVE_CVX.totalSupply() / BVE_CVX.balance();
+        uint256 fromDeposit = totalAURA * BVE_AURA.totalSupply() / BVE_AURA.balance();
 
         uint256 ops_fee;
         uint256 toEmit;
@@ -181,49 +214,54 @@ contract VotiumBribesProcessor is CowSwapSeller {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
-            ops_fee = totalCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+            ops_fee = totalAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
 
-            toEmit = totalCVX - ops_fee;
-
-            CVX.safeApprove(address(BVE_CVX), totalCVX);
-
-            uint256 treasuryPrevBalance = BVE_CVX.balanceOf(TREASURY);
+            toEmit = totalAURA - ops_fee;
+            AURA.safeApprove(address(BVE_AURA), totalAURA);
+            uint256 treasuryPrevBalance = BVE_AURA.balanceOf(TREASURY);
 
             // If we don't swap
 
             // Take the fee
-            BVE_CVX.depositFor(TREASURY, ops_fee);
+            BVE_AURA.depositFor(TREASURY, ops_fee);
 
             // Deposit and emit rest
-            uint256 initialBveCVXBalance = BVE_CVX.balanceOf((address(this)));
-            BVE_CVX.deposit(toEmit);
+            uint256 initialBveAURABalance = BVE_AURA.balanceOf((address(this)));
+            BVE_AURA.deposit(toEmit);
 
             // Update vars as we emit event with them
-            ops_fee = BVE_CVX.balanceOf(TREASURY) - treasuryPrevBalance;
-            toEmit = BVE_CVX.balanceOf(address(this)) - initialBveCVXBalance;
+            ops_fee = BVE_AURA.balanceOf(TREASURY) - treasuryPrevBalance;
+            toEmit = BVE_AURA.balanceOf(address(this)) - initialBveAURABalance;
         } else {
-            // Buy from pool
+            // Buy from pool using singleSwap
 
-            CVX.safeApprove(address(CVX_BVE_CVX_CURVE), totalCVX);
+            AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
 
-            // fromPurchase is calculated in same call so provides no slippage protection
-            // but we already calculated it so may as well use that
-            uint256 totalBveCVX = CVX_BVE_CVX_CURVE.exchange(0, 1, totalCVX, fromPurchase);
+            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
+                poolId: AURA_BVEAURA_POOL_ID,
+                kind: IBalancerVault.SwapKind.GIVEN_IN,
+                assetIn: IAsset(address(AURA)),
+                assetOut: IAsset(address(BVE_AURA)),
+                amount: totalAURA,
+                userData: new bytes(0)
+            });
 
-            ops_fee = totalBveCVX * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, fromPurchase, block.timestamp);
 
-            toEmit = totalBveCVX - ops_fee;
+            ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+
+            toEmit = totalBveAURA - ops_fee;
 
             // Take fee
-            IERC20(address(BVE_CVX)).safeTransfer(TREASURY, ops_fee);
+            IERC20(address(BVE_AURA)).safeTransfer(TREASURY, ops_fee);
         }
 
         // Emit token
-        IERC20(address(BVE_CVX)).safeApprove(address(HARVEST_FORWARDER), toEmit);
-        HARVEST_FORWARDER.distribute(address(BVE_CVX), toEmit, address(BVE_CVX));
+        IERC20(address(BVE_AURA)).safeApprove(address(HARVEST_FORWARDER), toEmit);
+        HARVEST_FORWARDER.distribute(address(BVE_AURA), toEmit, address(BVE_AURA));
 
-        emit PerformanceFeeGovernance(address(BVE_CVX), ops_fee);
-        emit BribeEmission(address(BVE_CVX), address(BVE_CVX), toEmit);
+        emit PerformanceFeeGovernance(address(BVE_AURA), ops_fee);
+        emit BribeEmission(address(BVE_AURA), address(BVE_AURA), toEmit); 
     }
 
     /// @dev
@@ -237,15 +275,10 @@ contract VotiumBribesProcessor is CowSwapSeller {
         uint256 toEmitTotal = BADGER.balanceOf(address(this));
         require(toEmitTotal > 0);
 
-        uint256 toEmitToLp = toEmitTotal * LP_FEE / BADGER_SHARE;
-        uint256 toEmitToBveCvx = toEmitTotal - toEmitToLp;
-
         BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
-        HARVEST_FORWARDER.distribute(address(BADGER), toEmitToLp, B_BVECVX_CVX);
-        HARVEST_FORWARDER.distribute(address(BADGER), toEmitToBveCvx, address(BVE_CVX));
+        HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));
 
-        emit BribeEmission(address(BADGER), B_BVECVX_CVX, toEmitToLp);
-        emit BribeEmission(address(BADGER), address(BVE_CVX), toEmitToBveCvx);
+        emit BribeEmission(address(BADGER), address(BVE_AURA), toEmitTotal);
     }
 
 
