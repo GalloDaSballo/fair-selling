@@ -69,7 +69,7 @@ contract OnChainPricingMainnet {
             quotes[4] = Quote("uniV3WithWETH", univ3WithWETHQuote);		
         }
 
-        /// TODO: Add Balancer
+        /// NOTE: Balancer is in V2
         
 
         // Because this is a generalized contract, it is best to just loop,

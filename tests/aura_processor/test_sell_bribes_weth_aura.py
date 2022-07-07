@@ -36,6 +36,7 @@ def test_sell_bribes_for_weth_cant_sell_aura(setup_aura_processor, weth, manager
 
 
 def test_sell_bribes_for_weth_works_when_selling_usdc_for_weth(setup_aura_processor, usdc, weth, manager, settlement):
+  ## NOTE: Because of UniV3 this may be detected as a revert, run the test separately and it should pass
   sell_amount = 1000000000
 
   order_details = get_cowswap_order(setup_aura_processor, usdc, weth, sell_amount)

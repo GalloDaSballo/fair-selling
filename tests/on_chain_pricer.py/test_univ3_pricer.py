@@ -10,8 +10,8 @@ def test_get_univ3_price(oneE18, weth, usdc, pricer):
   ## 1e18
   sell_amount = 1 * oneE18
     
-  ## minimum quote for ETH in USDC(1e6)
-  p = 1 * 1500 * 1000000  
+  ## minimum quote for ETH in USDC(1e6) ## Update based on market conditions
+  p = 1 * 1150 * 1000000  
   quote = pricer.getUniV3Price.call(weth.address, sell_amount, usdc.address) 
   assert quote >= p    
 
