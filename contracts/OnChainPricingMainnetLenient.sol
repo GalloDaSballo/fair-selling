@@ -9,6 +9,16 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
+
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
@@ -19,7 +29,7 @@ import "../interfaces/curve/ICurveRouter.sol";
 contract OnChainPricingMainnetLenient {
 
     struct Quote {
-        string name;
+        SwapType name;
         uint256 amountOut;
     }
     
@@ -62,13 +72,13 @@ contract OnChainPricingMainnetLenient {
         Quote[] memory quotes = new Quote[](length);
 
         uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[0] = Quote("curve", curveQuote);
+        quotes[0] = Quote(SwapType.CURVE, curveQuote);
 
         uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[1] = Quote("uniV2", uniQuote);
+        quotes[1] = Quote(SwapType.UNIV2, uniQuote);
 
         uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[2] = Quote("sushi", sushiQuote);
+        quotes[2] = Quote(SwapType.SUSHI, sushiQuote);
 
 
         /// TODO: Add Balancer and UniV3

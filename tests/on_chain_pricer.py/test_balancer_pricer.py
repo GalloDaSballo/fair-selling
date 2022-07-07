@@ -2,8 +2,7 @@ import brownie
 from brownie import *
 
 import sys
-sys.path.append("C:\\ray\\code\\badgerdao-fair-selling\\scripts")
-from get_price import get_coingecko_price, get_coinmarketcap_price, get_coinmarketcap_metadata
+from scripts.get_price import get_coingecko_price, get_coinmarketcap_price, get_coinmarketcap_metadata
 
 import pytest
 

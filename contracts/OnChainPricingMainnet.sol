@@ -13,6 +13,17 @@ import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/curve/ICurveRouter.sol";
+import "../interfaces/curve/ICurvePool.sol";
+
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
@@ -79,10 +90,13 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
+    uint256 public constant CURVE_FEE_SCALE = 100000;
 
     struct Quote {
-        string name;
+        SwapType name;
         uint256 amountOut;
+        bytes32[] pools; // specific pools involved in the optimal swap path
+        uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
     }
 
     /// @dev View function for testing the routing of the strategy
@@ -91,29 +105,30 @@ contract OnChainPricingMainnet {
         uint256 length = wethInvolved? 5 : 7; // Add length you need
 
         Quote[] memory quotes = new Quote[](length);
+        bytes32[] memory dummyPools;
+        uint256[] memory dummyPoolFees;
 
-        uint256 curveQuote = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[0] = Quote("curve", curveQuote);
+        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        if (curveQuote > 0){		   
+            (bytes32[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
+            quotes[0] = Quote(SwapType.CURVE, curveQuote, curvePools, curvePoolFees);		
+        }else{
+            quotes[0] = Quote(SwapType.CURVE, curveQuote, dummyPools, dummyPoolFees);         			
+        }
 
-        uint256 uniQuote = getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[1] = Quote("uniV2", uniQuote);
+        quotes[1] = Quote(SwapType.UNIV2, getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn), dummyPools, dummyPoolFees);
 
-        uint256 sushiQuote = getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn);
-        quotes[2] = Quote("sushi", sushiQuote);
+        quotes[2] = Quote(SwapType.SUSHI, getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn), dummyPools, dummyPoolFees);
 
-        uint256 univ3Quote = getUniV3Price(tokenIn, amountIn, tokenOut);
-        quotes[3] = Quote("uniV3", univ3Quote);
+        quotes[3] = Quote(SwapType.UNIV3, getUniV3Price(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
 
-        uint256 balancerQuote = getBalancerPrice(tokenIn, amountIn, tokenOut);
-        quotes[4] = Quote("balancer", balancerQuote);
+        quotes[4] = Quote(SwapType.BALANCER, getBalancerPrice(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
 
         if(!wethInvolved){
-            uint256 univ3WithWETHQuote = getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
-            quotes[5] = Quote("uniV3WithWETH", univ3WithWETHQuote);	
-			
-            uint256 balancerWithWETHQuote = getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
-            quotes[6] = Quote("balancerWithWETH", balancerWithWETHQuote);		
-        }        
+            quotes[5] = Quote(SwapType.UNIV3WITHWETH, getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);	
+
+            quotes[6] = Quote(SwapType.BALANCERWITHWETH, getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);		
+        }
 
         // Because this is a generalized contract, it is best to just loop,
         // Ideally we have a hierarchy for each chain to save some extra gas, but I think it's ok
@@ -129,8 +144,7 @@ contract OnChainPricingMainnet {
 
 
         return bestQuote;
-    }
-    
+    }    
 
     /// === Component Functions === /// 
     /// Why bother?
@@ -363,9 +377,22 @@ contract OnChainPricingMainnet {
 
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
-    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
-        (, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
+    function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
+        (address pool, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
 
-        return curveQuote;
+        return (pool, curveQuote);
+    }
+	
+    function convertToBytes32(address _input) public pure returns (bytes32){
+        return bytes32(uint256(uint160(_input)) << 96);
+    }
+	
+    /// @return assembled curve pools and fees in required Quote struct for given pool
+    function _getCurveFees(address _pool) internal view returns (bytes32[] memory, uint256[] memory){	
+        bytes32[] memory curvePools = new bytes32[](1);
+        curvePools[0] = convertToBytes32(_pool);
+        uint256[] memory curvePoolFees = new uint256[](1);
+        curvePoolFees[0] = ICurvePool(_pool).fee() * CURVE_FEE_SCALE / 1e10;//https://curve.readthedocs.io/factory-pools.html?highlight=fee#StableSwap.fee
+        return (curvePools, curvePoolFees);
     }
 }
