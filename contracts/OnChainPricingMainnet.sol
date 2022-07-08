@@ -14,7 +14,8 @@ import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 
 /// @title OnChainPricing
-/// @author Alex the Entreprenerd @ BadgerDAO
+/// @author Alex the Entreprenerd for BadgerDAO
+/// @author Camotelli @rayeaster
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
 /// @notice To spin a variant, just change the constants and use the Component Functions at the end of the file
 /// @notice Instead of upgrading in the future, just point to a new implementation
@@ -225,10 +226,6 @@ contract OnChainPricingMainnet {
         bytes32 addr = keccak256(abi.encodePacked(hex'ff', UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
         return address(uint160(uint256(addr)));
     }
-
-    // TODO: Consider adding a `bool` check for `isWeth` to skip the weth check (as it's computed above)
-    // TODO: Most importantly need to run some gas cost tests to ensure we keep at most at like 120k
-
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
     function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
