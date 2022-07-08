@@ -17,7 +17,7 @@ struct Quote {
     uint256 amountOut;
 }
 interface OnChainPricing {
-  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
+  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
 }
 // END OnchainPricing
 
@@ -191,7 +191,7 @@ contract CowSwapSeller is ReentrancyGuard {
         return orderUid;
     }
 
-    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual view returns(bool) {
+    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual returns(bool) {
         // Verify we get the same ID
         // NOTE: technically superfluous as we could just derive the id and setPresignature with that
         // But nice for internal testing
