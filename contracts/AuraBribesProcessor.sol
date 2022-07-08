@@ -51,9 +51,9 @@ contract AuraBribesProcessor is CowSwapSeller {
     uint256 public constant OPS_FEE = 500; // 5%
     uint256 public constant LP_FEE = 500; // 5%
 
-    /// `treasury_vault_multisig`
-    /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
-    address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
+    /// `treasury_voter_multisig`
+    /// https://github.com/Badger-Finance/badger-multisig/blob/6cd8f42ae0313d0da33a208d452370343e7599ba/helpers/addresses.py#L52
+    address public constant TREASURY = 0xA9ed98B5Fb8428d68664f3C5027c62A10d45826b;
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
@@ -102,7 +102,7 @@ contract AuraBribesProcessor is CowSwapSeller {
             emit SentBribeToGovernance(address(token), amount);
         } else {
             require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
-            
+
             // If manager rqs to emit in time, treasury still receives a fee
             if(!timeHasExpired && msg.sender == manager) {
                 // Take a fee here
@@ -261,7 +261,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         HARVEST_FORWARDER.distribute(address(BVE_AURA), toEmit, address(BVE_AURA));
 
         emit PerformanceFeeGovernance(address(BVE_AURA), ops_fee);
-        emit BribeEmission(address(BVE_AURA), address(BVE_AURA), toEmit); 
+        emit BribeEmission(address(BVE_AURA), address(BVE_AURA), toEmit);
     }
 
     /// @dev
@@ -292,6 +292,6 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         IERC20(token).safeApprove(RELAYER, 0);
         // NOTE: Set this to the amount you need SUM(all_orders) to ensure they all go through
-        IERC20(token).safeApprove(RELAYER, newAllowance); 
+        IERC20(token).safeApprove(RELAYER, newAllowance);
     }
 }
