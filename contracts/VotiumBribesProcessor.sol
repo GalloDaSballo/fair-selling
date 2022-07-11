@@ -51,9 +51,9 @@ contract VotiumBribesProcessor is CowSwapSeller {
     uint256 public constant OPS_FEE = 500; // 5%
     uint256 public constant LP_FEE = 500; // 5%
 
-    /// `treasury_vault_multisig`
-    /// https://github.com/Badger-Finance/badger-multisig/blob/9f04e0589b31597390f2115501462794baca2d4b/helpers/addresses.py#L38
-    address public constant TREASURY = 0xD0A7A8B98957b9CD3cFB9c0425AbE44551158e9e;
+    /// treasury's voting multisig
+    /// https://github.com/Badger-Finance/badger-multisig/blob/8f92204839ca3b022246423ec827f9dca7b0dc85/helpers/addresses.py#L49
+    address public constant TREASURY = 0xA9ed98B5Fb8428d68664f3C5027c62A10d45826b;
 
     ISettV4 public constant BVE_CVX = ISettV4(0xfd05D3C7fe2924020620A8bE4961bBaA747e6305);
     ICurvePool public constant CVX_BVE_CVX_CURVE = ICurvePool(0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512);
