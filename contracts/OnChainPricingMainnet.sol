@@ -7,23 +7,15 @@ import {IERC20Metadata} from "@oz/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@oz/utils/Address.sol";
 
-
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
+import "../interfaces/pricer/IPricerV1.sol";
 
-enum SwapType { 
-    CURVE, //0
-    UNIV2, //1
-    SUSHI, //2
-    UNIV3, //3
-    UNIV3WITHWETH, //4 
-    BALANCER, //5
-    BALANCERWITHWETH //6 
-}
+import "../interfaces/chainlink/AggregatorV3Interface.sol";
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd for BadgerDAO
@@ -37,13 +29,37 @@ enum SwapType {
 /// BALANCER
 /// CURVE
 /// UTILS
+/// PRICE FEED
+///
+//  @dev Supported Quote Sources (quote with * mark means it will be always included, otherwise only included if explicitly enabled)
+/// ----------------------------------------------------------------------------------------------------
+///   SOURCE   |  In->Out   |   In->WETH->Out   |   In->(WETH<->USDC)->Out   |   In->(WETH<->WBTC)->Out 
+///
+///    CURVE   |    Y*      |      -            |          -               |            -
+///    UNIV2   |    Y*      |      -            |          Y               |            Y
+///    SUSHI   |    Y*      |      -            |          Y               |            Y
+///    UNIV3   |    Y*      |      Y            |          Y               |            Y
+///   BALANCER |    Y*      |      Y            |          -               |            -
+///  PRICE FEED|    Y       |      -            |          -               |            -
+///
+///-----------------------------------------------------------------------------------------------------
 /// 
-contract OnChainPricingMainnet {
+contract OnChainPricingMainnet is OnChainPricing {
     using Address for address;
     
     // Assumption #1 Most tokens liquid pair is WETH (WETH is tokenized ETH for that chain)
     // e.g on Fantom, WETH would be wFTM
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+	
+    /// Worst case scenario for Pricing is TokenA -> ConnectorA -> ConnectorB -> TokenB
+    /// where ConnectorA and B are tokens we do have a feed for, and A and B for TA -> CA and CB -> TB are supported (quote is nonZero)
+    /// Supported connector tokens on Ethereum, paired with native/gas token, e.g., WETH in Ethereum
+    /// By default, these quote paths are disabled due to very time/gas-consuming costly
+    bool public feedConnectorsEnabled = false;
+    address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address public constant BTC_ETH_FEED = 0xdeb288F737066589598e9214E782fa5A8eD689e8;
+    address public constant ETH_USD_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
 
     /// == Uni V2 Like Routers || These revert on non-existent pair == //
     // UniV2
@@ -67,9 +83,7 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_WSTETH_WETH_POOLID = 0x32296969ef14eb0c6d29669c550d4a0449130230000200000000000000000080;
     address public constant WSTETH = 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0;
     bytes32 public constant BALANCERV2_WBTC_WETH_POOLID = 0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e;
-    address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     bytes32 public constant BALANCERV2_USDC_WETH_POOLID = 0x96646936b91d6b9d7d0c47c496afbf3d6ec7b6f8000200000000000000000019;
-    address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     bytes32 public constant BALANCERV2_BAL_WETH_POOLID = 0x5c6ee304399dbdb9c8ef030ab642b10820db8f56000200000000000000000014;
     address public constant BAL = 0xba100000625a3754423978a60c9317c58a424e3D;
     bytes32 public constant BALANCERV2_FEI_WETH_POOLID = 0x90291319f1d4ea3ad4db0dd8fe9e12baf749e84500020000000000000000013c;
@@ -106,13 +120,6 @@ contract OnChainPricingMainnet {
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
     uint256 public constant CURVE_FEE_SCALE = 100000;
 
-    struct Quote {
-        SwapType name;
-        uint256 amountOut;
-        bytes32[] pools; // specific pools involved in the optimal swap path
-        uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
-    }
-
     /// @dev Given tokenIn, out and amountIn, returns true if a quote will be non-zero
     /// @notice Doesn't guarantee optimality, just non-zero
     function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external returns (bool) {
@@ -126,7 +133,8 @@ contract OnChainPricingMainnet {
         }
 
         // If no pool this is fairly cheap, else highly likely there's a price
-        if(getUniV3Price(tokenIn, amountIn, tokenOut) > 0) {
+        (uint256 _univ3Quote, ) = getUniV3Price(tokenIn, amountIn, tokenOut);
+        if(_univ3Quote > 0) {
             return true;
         }
 
@@ -146,42 +154,71 @@ contract OnChainPricingMainnet {
             return true;
         }
     }
-
+	
     /// @dev External function, virtual so you can override, see Lenient Version
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
-    /// @dev View function for testing the routing of the strategy
+    /// @dev internal default implementation for quote routing of all available strategies
     function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
-        uint256 length = wethInvolved? 5 : 7; // Add length you need
+		
+        /// Supported Quote Sources
+        bool _extraPathEnabled = feedConnectorsEnabled;
+        uint256 feedConnectorsIndex = 5; // must-have quotes from CURVE/UNIV2/SUSHI/UNIV3/BALANCER
+        uint256 length = _extraPathEnabled? 17 : feedConnectorsIndex; // Add length you need
+            
+        /// add query [tokenIn -> WETH -> tokenOut] 
+        if (!wethInvolved && _extraPathEnabled){
+            length = length + 2; 
+        }
 
         Quote[] memory quotes = new Quote[](length);
         bytes32[] memory dummyPools;
         uint256[] memory dummyPoolFees;
-
-        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
-        if (curveQuote > 0){		   
-            (bytes32[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
-            quotes[0] = Quote(SwapType.CURVE, curveQuote, curvePools, curvePoolFees);		
-        } else {
-            quotes[0] = Quote(SwapType.CURVE, curveQuote, dummyPools, dummyPoolFees);         			
+		
+        /// Include pool address for Curve quote	
+        {
+            (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+            if (curveQuote > 0){		   
+                (bytes32[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
+                quotes[0] = Quote(SwapType.CURVE, curveQuote, curvePools, curvePoolFees);		
+            }else{
+                quotes[0] = Quote(SwapType.CURVE, curveQuote, dummyPools, dummyPoolFees);         			
+            }
         }
 
         quotes[1] = Quote(SwapType.UNIV2, getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn), dummyPools, dummyPoolFees);
-
         quotes[2] = Quote(SwapType.SUSHI, getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn), dummyPools, dummyPoolFees);
 
-        quotes[3] = Quote(SwapType.UNIV3, getUniV3Price(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
-
-        quotes[4] = Quote(SwapType.BALANCER, getBalancerPrice(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
-
-        if(!wethInvolved){
-            quotes[5] = Quote(SwapType.UNIV3WITHWETH, getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);	
-
-            quotes[6] = Quote(SwapType.BALANCERWITHWETH, getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);		
+        /// Include pool fee for Uniswap V3 quote		
+        {
+            (uint256 _univ3Quote, uint256 _univ3Fee) = getUniV3Price(tokenIn, amountIn, tokenOut);
+            if (_univ3Quote > 0){
+                uint256[] memory univ3PoolFees = new uint256[](1);
+                univ3PoolFees[0] = _univ3Fee;
+                quotes[3] = Quote(SwapType.UNIV3, _univ3Quote, dummyPools, univ3PoolFees);		
+            } else{
+                quotes[3] = Quote(SwapType.UNIV3, _univ3Quote, dummyPools, dummyPoolFees);		    
+            }
         }
+		
+        /// Include pool ID for Balancer V2 quote
+        {
+            (uint256 _balancerQuote, bytes32 _balancerPoolId) = getBalancerPrice(tokenIn, amountIn, tokenOut);
+            if (_balancerQuote > 0){
+                bytes32[] memory balancerPools = new bytes32[](1);
+                balancerPools[0] = _balancerPoolId;
+                quotes[4] = Quote(SwapType.BALANCER, _balancerQuote, balancerPools, dummyPoolFees);		
+            }else{
+                quotes[4] = Quote(SwapType.BALANCER, _balancerQuote, dummyPools, dummyPoolFees);				
+            }
+        }
+
+        /// Following paths would skip by default unless explicitly enabled
+        _quoteWithWETH(quotes, tokenIn, tokenOut, amountIn, _extraPathEnabled, length);		
+        _quoteWithFeedConnectors(quotes, tokenIn, tokenOut, amountIn, feedConnectorsIndex);	
 
         // Because this is a generalized contract, it is best to just loop,
         // Ideally we have a hierarchy for each chain to save some extra gas, but I think it's ok
@@ -195,9 +232,8 @@ contract OnChainPricingMainnet {
             }
         }
 
-
         return bestQuote;
-    }    
+    }
 
     /// === Component Functions === /// 
     /// Why bother?
@@ -226,41 +262,120 @@ contract OnChainPricingMainnet {
 
         return quote;
     }
+	
+    /// @dev Given the address of the input token & amount & the output token, 
+    /// @dev try Uniswap V2 quote query by combining paths (input token ---> connector token A & connector token B ---> output token) 
+    /// @dev with price feed between A and B (one of them is chosen as native token like WETH)
+    function getUniPriceWithConnectorFeed(address router, address tokenIn, uint256 amountIn, address tokenOut, address connectorTokenA, address connectorTokenB) public view returns (uint256) {
+        if (_checkSameInOutAsConnectors(tokenIn, tokenOut, connectorTokenA, connectorTokenB)){
+            return 0;
+        }
+		
+        _checkSupportedConnectorsFeed(connectorTokenA, connectorTokenB);
+		
+        uint256 connectorAmountA = tokenIn == connectorTokenA? amountIn : getUniPrice(router, tokenIn, connectorTokenA, amountIn);	
+        if (connectorAmountA <= 0){	
+            return 0;
+        }	
+		
+        // compare quote from price feed and direct swap between connectorA <-> connectorB
+        uint256 connectorA2B = _convertConnectors(connectorTokenA, connectorTokenB, connectorAmountA);
+        uint256 connectorA2BViaSwap = getUniPrice(router, connectorTokenA, connectorTokenB, connectorAmountA);	
+        if (connectorA2BViaSwap <= 0 || connectorA2B <= 0){	
+            return 0;
+        }	
+		
+        uint256 _amt = connectorA2BViaSwap < connectorA2B? connectorA2BViaSwap : connectorA2B;
+        return connectorTokenB == tokenOut? _amt : getUniPrice(router, connectorTokenB, tokenOut, _amt);		
+    }
 
     /// === UNIV3 === ///
 	
     /// @dev Given the address of the input token & amount & the output token
-    /// @return the quote for it
-    function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) {
+    /// @return the quote for it with pool fee in Uniswap V3
+    function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256, uint256) {
         uint256 quoteRate;
+        uint256 quoteFee;
 		
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         uint256 feeTypes = univ3_fees.length;
-        for (uint256 i = 0; i < feeTypes; ){	
+		
+        {
+          for (uint256 i = 0; i < feeTypes; ){	
              //filter out disqualified pools to save gas on quoter swap query
-             uint256 rate = _getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn);		
-             if (rate > 0){
-                 uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);
-                 if (quote > quoteRate){
-                     quoteRate = quote;				
-                 }
+             uint24 _fee = univ3_fees[i];
+             uint256 _quote = _checkUniV3RateAndQuote(tokenIn, amountIn, tokenOut, _fee);
+             if (_quote > quoteRate){
+                 quoteRate = _quote;
+                 quoteFee = _fee;
              }
 
              unchecked { ++i; }
+          }
         }
 		
-        return quoteRate;
+        return (quoteRate, quoteFee);
+    }
+	
+    /// @dev internal function to avoid stack too deep 
+    function _checkUniV3RateAndQuote(address tokenIn, uint256 amountIn, address tokenOut, uint24 _fee) internal returns (uint256){
+        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
+        uint256 _rate = _getUniV3Rate(token0, token1, _fee, token0Price, amountIn);
+        if (_rate > 0){
+            return _getUniV3QuoterQuery(tokenIn, tokenOut, _fee, amountIn);	
+        }else {
+            return 0;		
+        }            
     }
 	
     /// @dev Given the address of the input token & amount & the output token & connector token in between (input token ---> connector token ---> output token)
-    /// @return the quote for it
-    function getUniV3PriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) {
-        uint256 connectorAmount = getUniV3Price(tokenIn, amountIn, connectorToken);	
+    /// @return the quote for it with two hop fees: [tokenIn -> connectorToken] & [connectorToken -> tokenOut]
+    function getUniV3PriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256, uint256, uint256) {
+        (uint256 connectorAmount, uint256 _feeInput2Connector) = getUniV3Price(tokenIn, amountIn, connectorToken);	
         if (connectorAmount > 0){	
-            return getUniV3Price(connectorToken, connectorAmount, tokenOut);
+            (uint256 connector2OutputAmount, uint256 _feeConnector2Output) = getUniV3Price(connectorToken, connectorAmount, tokenOut);
+            return (connector2OutputAmount, _feeInput2Connector, _feeConnector2Output);
         } else{
-            return 0;
+            return (0, 0, 0);
         }
+    }	  
+	
+    /// @dev Given the address of the input token & amount & the output token, 
+    /// @dev try Uniswap V3 quote query by combining paths (input token -> connector token A ~ connector token B -> output token) 
+    /// @dev with price feed between A and B (one of them is chosen as native token like WETH)
+    /// @return the quote for it with three hop fees: [tokenIn -> connectorTokenA] & [connectorTokenA -> connectorTokenB] & [connectorTokenB -> tokenOut]
+    function getUniV3PriceWithConnectorFeed(address tokenIn, uint256 amountIn, address tokenOut, address connectorTokenA, address connectorTokenB) public returns (uint256, uint256, uint256, uint256) {
+        if (_checkSameInOutAsConnectors(tokenIn, tokenOut, connectorTokenA, connectorTokenB)){
+            return (0, 0, 0, 0);
+        }
+		
+        _checkSupportedConnectorsFeed(connectorTokenA, connectorTokenB);
+		
+        (uint256 connectorAmountA, uint256 _feeInput2ConnectorA) = tokenIn == connectorTokenA? (amountIn, 0) : getUniV3Price(tokenIn, amountIn, connectorTokenA);	
+        if (connectorAmountA <= 0){	
+            return (0, 0, 0, 0);
+        }	
+			
+        (uint256 _amt, uint256 _feeConnectorA2B) = _compareFeedAndUniV3Swap(connectorTokenA, connectorTokenB, connectorAmountA); 
+        if (_amt <= 0){	
+            return (0, 0, 0, 0);
+        }
+		
+        (uint256 _input2Output, uint256 _feeConnectorB2Output) = connectorTokenB == tokenOut? (_amt, 0) : getUniV3Price(connectorTokenB, _amt, tokenOut);	
+        return (_input2Output, _feeInput2ConnectorA, _feeConnectorA2B, _feeConnectorB2Output);		
+    }
+	
+    /// @dev internal function to avoid stack too deep 
+    function _compareFeedAndUniV3Swap(address _connectorTokenA, address _connectorTokenB, uint256 _connectorAmountA) internal returns (uint256, uint256){	  	
+		
+        // compare quote from price feed and direct swap in Uniswap V3 between connectorA <-> connectorB
+        uint256 connectorA2B = _convertConnectors(_connectorTokenA, _connectorTokenB, _connectorAmountA);
+        (uint256 connectorA2BViaSwap, uint256 _feeConnectorA2B) = getUniV3Price(_connectorTokenA, _connectorAmountA, _connectorTokenB);
+        if (connectorA2BViaSwap <= 0 || connectorA2B <= 0){	
+            return (0, 0);
+        }
+		
+        return (connectorA2BViaSwap < connectorA2B? connectorA2BViaSwap : connectorA2B, _feeConnectorA2B);
     }
 	
     /// @dev query swap result from Uniswap V3 quoter for given tokenIn -> tokenOut with amountIn & fee
@@ -344,11 +459,11 @@ contract OnChainPricingMainnet {
 
     /// === BALANCER === ///
 	
-    /// @dev Given the input/output token, returns the quote for input amount from Balancer V2
-    function getBalancerPrice(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) { 
+    /// @dev Given the input/output token, returns the quote for input amount from Balancer V2 and according poolId
+    function getBalancerPrice(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256, bytes32) { 
         bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
         if (poolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
+            return (0, bytes32(0));
         }
 		
         address[] memory assets = new address[](2);
@@ -363,18 +478,19 @@ contract OnChainPricingMainnet {
         int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
 
         // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
+		
+        return (assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0, poolId);
     }
 	
-    /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2
-    function getBalancerPriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) { 
+    /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2 and according poolIds
+    function getBalancerPriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256, bytes32, bytes32) { 
         bytes32 firstPoolId = getBalancerV2Pool(tokenIn, connectorToken);
         if (firstPoolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
+            return (0, bytes32(0), bytes32(0));
         }
         bytes32 secondPoolId = getBalancerV2Pool(connectorToken, tokenOut);
         if (secondPoolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
+            return (0, bytes32(0), bytes32(0));
         }
 		
         address[] memory assets = new address[](3);
@@ -391,7 +507,7 @@ contract OnChainPricingMainnet {
         int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
 
         // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
+        return (assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0, firstPoolId, secondPoolId);    
     }
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
@@ -466,4 +582,201 @@ contract OnChainPricingMainnet {
     function convertToBytes32(address _input) public pure returns (bytes32){
         return bytes32(uint256(uint160(_input)) << 96);
     }
+	
+    /// === QUOTE W/ WETH IN BETWEEN === ///
+	
+    /// @dev this function maybe resource consuming. only use it if necessary
+    function _quoteWithWETH(Quote[] memory quotes, address tokenIn, address tokenOut, uint256 amountIn, bool _extraPathEnabled, uint256 length) internal {		
+        bytes32[] memory dummyPools;
+        uint256[] memory dummyPoolFees;
+		
+        if (!(tokenIn == WETH || tokenOut == WETH) && _extraPathEnabled){
+            { 
+               /// Include pool fees in Uniswap V3 with WETH as connector token in between
+               (uint256 _univ3WithWETHQuote, uint256 _univ3WithWETHFee1, uint256 _univ3WithWETHFee2) = getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
+               if (_univ3WithWETHQuote > 0){
+                   uint256[] memory univ3WithWETHPoolFees = new uint256[](2);
+                   univ3WithWETHPoolFees[0] = _univ3WithWETHFee1;
+                   univ3WithWETHPoolFees[1] = _univ3WithWETHFee2;
+                   quotes[length - 2] = Quote(SwapType.UNIV3WITHWETH, _univ3WithWETHQuote, dummyPools, univ3WithWETHPoolFees);				
+               } else{
+                   quotes[length - 2] = Quote(SwapType.UNIV3WITHWETH, _univ3WithWETHQuote, dummyPools, dummyPoolFees);				
+               }
+            }
+			
+            { 			
+               /// Include pool IDs in Balancer V2 with WETH as connector token in between
+               (uint256 _balancerWithWETHQuote, bytes32 _balancerWithWETHPoolId1, bytes32 _balancerWithWETHPoolId2) = getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH);
+               if (_balancerWithWETHQuote > 0){
+                   bytes32[] memory balancerWithWETHPools = new bytes32[](1);
+                   balancerWithWETHPools[0] = _balancerWithWETHPoolId1;
+                   balancerWithWETHPools[1] = _balancerWithWETHPoolId2;	
+                   quotes[length - 1] = Quote(SwapType.BALANCERWITHWETH, _balancerWithWETHQuote, balancerWithWETHPools, dummyPoolFees);			
+               }else{
+                   quotes[length - 1] = Quote(SwapType.BALANCERWITHWETH, _balancerWithWETHQuote, dummyPools, dummyPoolFees);			
+               }
+            }		
+        }	
+    }
+	
+    /// === QUOTE W/ 2 CONNECTORS IN BETWEEN AND PRICE FEED === ///
+	
+    /// @dev this function is quite resource consuming. only use it if necessary
+    function _quoteWithFeedConnectors(Quote[] memory quotes, address tokenIn, address tokenOut, uint256 amountIn, uint256 _startIdx) internal {
+        if (!feedConnectorsEnabled){
+            return;
+        }
+		
+        bytes32[] memory dummyPools;
+        uint256[] memory dummyPoolFees;
+	    
+        /// Add worst-case query via connector tokens in between with price feed: 
+        /// [tokenIn -> connectorTokenA ~ connectorTokenB -> tokenOut]
+        {
+            /// NOTE check worse-case quotes with connectors: WETH<->USDC in Uniswap V2
+            quotes[_startIdx] = Quote(SwapType.UNIV2WITHWETHUSDC, getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, WETH, USDC), dummyPools, dummyPoolFees);
+            quotes[_startIdx + 1] = Quote(SwapType.UNIV2WITHUSDCWETH, getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, USDC, WETH), dummyPools, dummyPoolFees);			
+        }		
+        {
+            /// NOTE check worse-case quotes with connectors: WETH<->USDC in SushiSwap
+            quotes[_startIdx + 2] = Quote(SwapType.SUSHIWITHWETHUSDC, getUniPriceWithConnectorFeed(SUSHI_ROUTER, tokenIn, amountIn, tokenOut, WETH, USDC), dummyPools, dummyPoolFees);
+            quotes[_startIdx + 3] = Quote(SwapType.SUSHIWITHUSDCWETH, getUniPriceWithConnectorFeed(SUSHI_ROUTER, tokenIn, amountIn, tokenOut, USDC, WETH), dummyPools, dummyPoolFees);			
+        }
+        {
+            /// NOTE check worse-case quotes with connectors: WETH<->WBTC in Uniswap V2
+            quotes[_startIdx + 4] = Quote(SwapType.UNIV2WITHWETHWBTC, getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, WETH, WBTC), dummyPools, dummyPoolFees);
+            quotes[_startIdx + 5] = Quote(SwapType.UNIV2WITHWBTCWETH, getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, WBTC, WETH), dummyPools, dummyPoolFees);			
+        }			
+        {
+            /// NOTE check worse-case quotes with connectors: WETH<->WBTC in SushiSwap
+            quotes[_startIdx + 6] = Quote(SwapType.SUSHIWITHWETHWBTC, getUniPriceWithConnectorFeed(SUSHI_ROUTER, tokenIn, amountIn, tokenOut, WETH, WBTC), dummyPools, dummyPoolFees);
+            quotes[_startIdx + 7] = Quote(SwapType.SUSHIWITHWBTCWETH, getUniPriceWithConnectorFeed(SUSHI_ROUTER, tokenIn, amountIn, tokenOut, WBTC, WETH), dummyPools, dummyPoolFees);
+        }	
+        /// NOTE check worse-case quotes with connectors: WETH<->USDC in Uniswap V3	
+        {
+            (uint256 _univ3WithWETHUSDCQuote, uint256 _univ3WithWETHUSDCFee1, uint256 _univ3WithWETHUSDCFee2, uint256 _univ3WithWETHUSDCFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WETH, USDC);
+            if (_univ3WithWETHUSDCQuote > 0){
+                uint256[] memory univ3WithWETHUSDCPoolFees = new uint256[](3);
+                univ3WithWETHUSDCPoolFees[0] = _univ3WithWETHUSDCFee1;
+                univ3WithWETHUSDCPoolFees[1] = _univ3WithWETHUSDCFee2;
+                univ3WithWETHUSDCPoolFees[2] = _univ3WithWETHUSDCFee3;
+                quotes[_startIdx + 8] = Quote(SwapType.UNIV3WITHWETHUSDC, _univ3WithWETHUSDCQuote, dummyPools, univ3WithWETHUSDCPoolFees);			
+            } else{
+                quotes[_startIdx + 8] = Quote(SwapType.UNIV3WITHWETHUSDC, _univ3WithWETHUSDCQuote, dummyPools, dummyPoolFees);				
+            }
+        }		
+        {		
+            (uint256 _univ3WithUSDCWETHQuote, uint256 _univ3WithUSDCWETHFee1, uint256 _univ3WithUSDCWETHFee2, uint256 _univ3WithUSDCWETHFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, USDC, WETH);
+            if (_univ3WithUSDCWETHQuote > 0){
+                uint256[] memory univ3WithUSDCWETHPoolFees = new uint256[](3);
+                univ3WithUSDCWETHPoolFees[0] = _univ3WithUSDCWETHFee1;
+                univ3WithUSDCWETHPoolFees[1] = _univ3WithUSDCWETHFee2;
+                univ3WithUSDCWETHPoolFees[2] = _univ3WithUSDCWETHFee3;
+                quotes[_startIdx + 9] = Quote(SwapType.UNIV3WITHUSDCWETH, _univ3WithUSDCWETHQuote, dummyPools, univ3WithUSDCWETHPoolFees);			
+            } else{
+                quotes[_startIdx + 9] = Quote(SwapType.UNIV3WITHUSDCWETH, _univ3WithUSDCWETHQuote, dummyPools, dummyPoolFees);						
+            }            	
+        }
+        /// NOTE check worse-case quotes with connectors: WETH<->WBTC in Uniswap V3
+        {
+            (uint256 _univ3WithWETHWBTCQuote, uint256 _univ3WithWETHWBTCFee1, uint256 _univ3WithWETHWBTCFee2, uint256 _univ3WithWETHWBTCFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WETH, WBTC); 
+            if (_univ3WithWETHWBTCQuote > 0){
+                uint256[] memory univ3WithWETHWBTCPoolFees = new uint256[](3);
+                univ3WithWETHWBTCPoolFees[0] = _univ3WithWETHWBTCFee1;
+                univ3WithWETHWBTCPoolFees[1] = _univ3WithWETHWBTCFee2;
+                univ3WithWETHWBTCPoolFees[2] = _univ3WithWETHWBTCFee3;
+                quotes[_startIdx + 10] = Quote(SwapType.UNIV3WITHWETHWBTC, _univ3WithWETHWBTCQuote, dummyPools, univ3WithWETHWBTCPoolFees);			
+            } else{
+                quotes[_startIdx + 10] = Quote(SwapType.UNIV3WITHWETHWBTC, _univ3WithWETHWBTCQuote, dummyPools, dummyPoolFees);						
+            }          	
+        } 
+        {		
+            (uint256 _univ3WithWBTCWETHQuote, uint256 _univ3WithWBTCWETHFee1, uint256 _univ3WithWBTCWETHFee2, uint256 _univ3WithWBTCWETHFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WBTC, WETH); 
+            if (_univ3WithWBTCWETHQuote > 0){
+                uint256[] memory univ3WithWBTCWETHPoolFees = new uint256[](3);
+                univ3WithWBTCWETHPoolFees[0] = _univ3WithWBTCWETHFee1;
+                univ3WithWBTCWETHPoolFees[1] = _univ3WithWBTCWETHFee2;
+                univ3WithWBTCWETHPoolFees[2] = _univ3WithWBTCWETHFee3;
+                quotes[_startIdx + 11] = Quote(SwapType.UNIV3WITHWBTCWETH, _univ3WithWBTCWETHQuote, dummyPools, univ3WithWBTCWETHPoolFees);			
+            } else{
+                quotes[_startIdx + 12] = Quote(SwapType.UNIV3WITHWBTCWETH, _univ3WithWBTCWETHQuote, dummyPools, dummyPoolFees);					
+            }           
+        }
+    }
+	
+    /// === Price Feed Functions === /// 
+	
+    /// @return exchange output amount from connector _tokenA to connector _tokenB for given _amountTokenA
+    /// @dev all supported connectors with possible swap direction are:
+    /// @dev    WETH -> USDC	
+    /// @dev    USDC -> WETH	
+    /// @dev    WETH -> WBTC	
+    /// @dev    WBTC -> WETH	 
+    function _convertConnectors(address _tokenA, address _tokenB, uint256 _amountTokenA) internal view returns (uint256){
+        uint256 _rateA2B;
+        if (_tokenA == WETH && _tokenB == USDC){
+            _rateA2B = latestUSDFeed(true);
+        } else if (_tokenA == USDC && _tokenB == WETH){
+            _rateA2B = latestUSDFeed(false);
+        } else if (_tokenA == WETH && _tokenB == WBTC){
+            _rateA2B = latestBTCFeed(true);
+        } else if (_tokenA == WBTC && _tokenB == WETH){
+            _rateA2B = latestBTCFeed(false);
+        }
+		
+        if (_rateA2B <= 0){	
+            return 0;
+        }
+
+        uint256 _decimalA = 10 ** IERC20Metadata(_tokenA).decimals();
+        uint256 _decimalB = 10 ** IERC20Metadata(_tokenB).decimals();
+        return _amountTokenA * _rateA2B * _decimalB / _decimalA / 1e18;
+    }
+	
+    /// @dev check if given connectors are supported in this pricer for price feed query
+    function _checkSupportedConnectorsFeed(address _connectorTokenA, address _connectorTokenB) internal view returns(bool){
+        require(_connectorTokenA != _connectorTokenB, '!SAME');	
+        require(_connectorTokenA == WETH || _connectorTokenB == WETH, '!ETH');
+        require(_connectorTokenA == WETH || _connectorTokenA == USDC || _connectorTokenA == WBTC, '!A');
+        require(_connectorTokenB == WETH || _connectorTokenB == USDC || _connectorTokenB == WBTC, '!B');
+        return true;
+    }
+	
+    /// @dev check if given input & output tokens are same with connector tokens
+    function _checkSameInOutAsConnectors(address _input, address _output, address _connectorTokenA, address _connectorTokenB) internal view returns(bool) {
+        return _input == _connectorTokenA && _output == _connectorTokenB;
+    }
+	
+    /// @return latest price feed from chainlink for given feed price
+    function _getLatestPrice(address _priceFeed) internal view returns (uint256){
+        (,int price,,,) = IAggregatorV3(_priceFeed).latestRoundData();		
+        return uint256(price);
+    } 
+	
+    /// @return latest price feed from native token (WETH in ethereum) to USD if _fromNative is true, otherwise from USD to native token
+    /// @dev returned result is scaled to 1e18
+    function latestUSDFeed(bool _fromNative) public view returns (uint256){
+        uint256 feedPrice = _getLatestPrice(ETH_USD_FEED);
+        uint256 feedDecimal = IAggregatorV3(ETH_USD_FEED).decimals();	
+        uint256 _decimal = 10 ** feedDecimal;
+        if (_fromNative){	
+            return feedPrice * 1e18 / _decimal;
+        } else{
+            return 1e18 * _decimal / feedPrice;
+        }
+    } 
+	
+    /// @return latest price feed from native token (WETH in ethereum) to BTC if _fromNative is true, otherwise from BTC to native token
+    /// @dev returned result is scaled to 1e18
+    function latestBTCFeed(bool _fromNative) public view returns (uint256){
+        uint256 feedPrice = _getLatestPrice(BTC_ETH_FEED);
+        uint256 feedDecimal = IAggregatorV3(BTC_ETH_FEED).decimals();		
+        uint256 _decimal = 10 ** feedDecimal;			
+        if (!_fromNative){	
+            return feedPrice * 1e18 / _decimal;
+        } else{
+            return 1e18 * _decimal / feedPrice;
+        }
+    }
+	
 }

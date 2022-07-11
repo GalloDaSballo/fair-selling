@@ -6,6 +6,7 @@ import pytest
 """
     test swap in Curve from token A to token B directly
 """
+## @pytest.mark.skip(reason="WETH2CRV")
 def test_swap_in_curve(oneE18, weth_whale, weth, crv, pricer, swapexecutor):
   ## 1e18
   sell_amount = 1 * oneE18
@@ -30,6 +31,7 @@ def test_swap_in_curve(oneE18, weth_whale, weth, crv, pricer, swapexecutor):
 """
     test swap in Uniswap V2 from token A to token B directly
 """
+## @pytest.mark.skip(reason="WETH2USDC")
 def test_swap_in_univ2(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):
   ## 1e18
   sell_amount = 1 * oneE18
@@ -53,6 +55,7 @@ def test_swap_in_univ2(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):
 """
     test swap in Uniswap V3 from token A to token B directly
 """
+## @pytest.mark.skip(reason="WBTC2USDC-UNIV3-DIRECTLY")
 def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecutor):
   ## 1e8
   sell_amount = 1 * 100000000
@@ -60,13 +63,13 @@ def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecut
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
   quote = pricer.getUniV3Price(wbtc.address, sell_amount, usdc.address).return_value
-  assert quote >= p 
+  assert quote[0] >= p 
 
   ## swap on chain
   slippageTolerance = 0.95 
   wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
-  minOutput = quote * slippageTolerance   
+  minOutput = quote[0] * slippageTolerance   
   balBefore = usdc.balanceOf(wbtc_whale)
   swapexecutor.doOptimalSwapWithQuote(wbtc.address, usdc.address, sell_amount, (3, minOutput, [], [3000]), {'from': wbtc_whale})
   balAfter = usdc.balanceOf(wbtc_whale)
@@ -75,7 +78,7 @@ def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecut
 """
     test swap in Uniswap V3 from token A to token B via connectorToken C
 """
-
+## @pytest.mark.skip(reason="WBTC2USDC-UNIV3")
 def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecutor):  
   ## 1e8
   sell_amount = 1 * 100000000
@@ -83,13 +86,13 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
   quote = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
-  assert quote >= p 
+  assert quote[0] >= p 
 
   ## swap on chain
   slippageTolerance = 0.95 
   wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
-  minOutput = quote * slippageTolerance  
+  minOutput = quote[0] * slippageTolerance  
   ## encodedPath = swapexecutor.encodeUniV3TwoHop(wbtc.address, 500, weth.address, 500, usdc.address)   
   balBefore = usdc.balanceOf(wbtc_whale)
   swapexecutor.doOptimalSwapWithQuote(wbtc.address, usdc.address, sell_amount, (4, minOutput, [], [500,500]), {'from': wbtc_whale})
@@ -99,6 +102,7 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
 """
     test swap in Balancer V2 from token A to token B via connectorToken C
 """
+## @pytest.mark.skip(reason="WBTC2USDC")
 def test_swap_in_balancer_batch(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecutor):  
   ## 1e8
   sell_amount = 1 * 100000000
@@ -123,6 +127,7 @@ def test_swap_in_balancer_batch(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, sw
 """
     test swap in Balancer V2 from token A to token B directly
 """
+## @pytest.mark.skip(reason="WETH2USDC-BALANCER")
 def test_swap_in_balancer_single(oneE18, weth_whale, weth, usdc, pricer, swapexecutor):  
   ## 1e18
   sell_amount = 1 * oneE18

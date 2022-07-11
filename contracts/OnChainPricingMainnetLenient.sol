@@ -8,6 +8,7 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
+import "../interfaces/pricer/IPricerV1.sol";
 
 import {OnChainPricingMainnet} from "./OnChainPricingMainnet.sol";
 

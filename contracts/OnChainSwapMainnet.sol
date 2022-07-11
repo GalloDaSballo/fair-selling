@@ -8,31 +8,7 @@ import "../interfaces/uniswap/IUniswapRouterV3.sol";
 import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
-
-/**
-    NOTE: UNSAFE, UNTESTED, WIP, Use, read, look at and copy at your own risk
- */
-
-enum SwapType { 
-    CURVE, //0
-    UNIV2, //1
-    SUSHI, //2
-    UNIV3, //3
-    UNIV3WITHWETH, //4 
-    BALANCER, //5
-    BALANCERWITHWETH //6 
-}
-
-struct Quote {
-    SwapType name;
-    uint256 amountOut;
-    bytes32[] pools; // specific pools involved in the optimal swap path
-    uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
-}
-
-interface OnChainPricing {
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
-}
+import "../interfaces/pricer/IPricerV1.sol";
 
 /// @dev Mainnet Version of swap for various on-chain dex
 contract OnChainSwapMainnet {
@@ -100,6 +76,7 @@ contract OnChainSwapMainnet {
         }else if (dex == SwapType.BALANCERWITHWETH){
             return execSwapBalancerV2Batch(optimalQuote.pools[0], optimalQuote.pools[1], amountIn, tokenIn, tokenOut, WETH, _minOut, msg.sender);
         }else{
+            // TODO swap implementation with connectors & feed
             return 0;
         }
     }
