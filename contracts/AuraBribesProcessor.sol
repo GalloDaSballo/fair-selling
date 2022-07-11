@@ -46,10 +46,13 @@ contract AuraBribesProcessor is CowSwapSeller {
     address public constant STRATEGY = 0x3c0989eF27e3e3fAb87a2d7C38B35880C90E63b5;
     address public constant BADGER_TREE = 0x660802Fc641b154aBA66a62137e71f331B6d787A;
 
+    // Source: https://badger.com/graviaura
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant BADGER_SHARE = 2750; //27.50%
+    uint256 public constant BADGER_SHARE = 2500; //25.00%
+
+    // A 5% fee will be charged on all bribes processed.
     uint256 public constant OPS_FEE = 500; // 5%
-    uint256 public constant LP_FEE = 500; // 5%
+    // uint256 public constant LP_FEE = 0; // Not used
 
     /// `treasury_voter_multisig`
     /// https://github.com/Badger-Finance/badger-multisig/blob/6cd8f42ae0313d0da33a208d452370343e7599ba/helpers/addresses.py#L52
@@ -60,7 +63,6 @@ contract AuraBribesProcessor is CowSwapSeller {
     bytes32 public constant AURA_BVEAURA_POOL_ID = 0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
 
     // We send tokens to emit here
     IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
