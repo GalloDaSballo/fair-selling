@@ -9,6 +9,10 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
 
+/**
+    NOTE: UNSAFE, UNTESTED, WIP, Use, read, look at and copy at your own risk
+ */
+
 enum SwapType { 
     CURVE, //0
     UNIV2, //1
