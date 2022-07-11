@@ -30,6 +30,13 @@ enum SwapType {
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
 /// @notice To spin a variant, just change the constants and use the Component Functions at the end of the file
 /// @notice Instead of upgrading in the future, just point to a new implementation
+/// @notice TOC
+/// UNIV2
+/// UNIV3
+/// BALANCER
+/// CURVE
+/// UTILS
+/// 
 contract OnChainPricingMainnet {
     using Address for address;
     
@@ -152,6 +159,8 @@ contract OnChainPricingMainnet {
     /// May as well use the separate functoions so each OnChain Pricing on different chains will be slightly different
     /// But ultimately will work in the same way
 
+    /// === UNIV2 === ///
+
     /// @dev Given the address of the UniV2Like Router, the input amount, and the path, returns the quote for it
     function getUniPrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
         address[] memory path = new address[](2);
@@ -170,7 +179,9 @@ contract OnChainPricingMainnet {
         }
 
         return quote;
-    }	  
+    }
+
+    /// === UNIV3 === ///
 	
     /// @dev Given the address of the input token & amount & the output token
     /// @return the quote for it
@@ -179,7 +190,7 @@ contract OnChainPricingMainnet {
 		
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         uint256 feeTypes = univ3_fees.length;
-        for (uint256 i = 0; i < feeTypes; ++i){	
+        for (uint256 i = 0; i < feeTypes; ){	
              //filter out disqualified pools to save gas on quoter swap query
              uint256 rate = _getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn);		
              if (rate > 0){
@@ -188,6 +199,8 @@ contract OnChainPricingMainnet {
                      quoteRate = quote;				
                  }
              }
+
+             unchecked { ++i; }
         }
 		
         return quoteRate;
@@ -282,6 +295,8 @@ contract OnChainPricingMainnet {
         bytes32 addr = keccak256(abi.encodePacked(hex'ff', UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
         return address(uint160(uint256(addr)));
     }
+
+    /// === BALANCER === ///
 	
     /// @dev Given the input/output token, returns the quote for input amount from Balancer V2
     function getBalancerPrice(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) { 
@@ -330,7 +345,7 @@ contract OnChainPricingMainnet {
         int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
 
         // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
+        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
     }
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
@@ -372,9 +387,7 @@ contract OnChainPricingMainnet {
         }		
     }
 
-    // TODO: Consider adding a `bool` check for `isWeth` to skip the weth check (as it's computed above)
-    // TODO: Most importantly need to run some gas cost tests to ensure we keep at most at like 120k
-
+    /// === CURVE === ///
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
     function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
@@ -383,16 +396,21 @@ contract OnChainPricingMainnet {
         return (pool, curveQuote);
     }
 	
-    function convertToBytes32(address _input) public pure returns (bytes32){
-        return bytes32(uint256(uint160(_input)) << 96);
-    }
-	
     /// @return assembled curve pools and fees in required Quote struct for given pool
+    // TODO: Decide if we need fees, as it costs more gas to compute
     function _getCurveFees(address _pool) internal view returns (bytes32[] memory, uint256[] memory){	
         bytes32[] memory curvePools = new bytes32[](1);
         curvePools[0] = convertToBytes32(_pool);
         uint256[] memory curvePoolFees = new uint256[](1);
         curvePoolFees[0] = ICurvePool(_pool).fee() * CURVE_FEE_SCALE / 1e10;//https://curve.readthedocs.io/factory-pools.html?highlight=fee#StableSwap.fee
         return (curvePools, curvePoolFees);
+    }
+
+    /// === UTILS === ///
+
+    /// @dev Given a address input, return the bytes32 representation
+    // TODO: Figure out if abi.encode is better
+    function convertToBytes32(address _input) public pure returns (bytes32){
+        return bytes32(uint256(uint160(_input)) << 96);
     }
 }
