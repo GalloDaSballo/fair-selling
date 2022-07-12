@@ -60,7 +60,10 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
-    bytes32 public constant AURA_BVEAURA_POOL_ID = 0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a;
+
+    /// BVE_AURA, WETH, AURA
+    /// https://app.balancer.fi/#/pool/0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267
+    bytes32 public constant BVE_AURA_WETH_AURA_POOL = 0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -100,7 +103,6 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 amount = token.balanceOf(address(this));
         if(sendToGovernance) {
             token.safeTransfer(DEV_MULTI, amount);
-
             emit SentBribeToGovernance(address(token), amount);
         } else {
             require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
@@ -116,6 +118,8 @@ contract AuraBribesProcessor is CowSwapSeller {
 
                 amount -= fee;
             }
+
+            // Emit to Tree
             token.safeApprove(address(HARVEST_FORWARDER), amount);
             HARVEST_FORWARDER.distribute(address(token), amount, address(BVE_AURA));
 
@@ -175,7 +179,6 @@ contract AuraBribesProcessor is CowSwapSeller {
         require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         // Get quote from balancer pool using queryBatchSwap
-
         IBalancerVault.FundManagement memory fundManagement = IBalancerVault.FundManagement({
             sender: address(this),
             fromInternalBalance: false,
@@ -188,7 +191,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         assets[1] = IAsset(address(BVE_AURA));
 
         IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
-            poolId: AURA_BVEAURA_POOL_ID,
+            poolId: BVE_AURA_WETH_AURA_POOL,
             assetInIndex: 0,
             assetOutIndex: 1,
             amount: totalAURA,
@@ -197,6 +200,7 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
         swaps[0] = batchSwapStep;
+
         // Amount out is positive amount of second asset delta
         int256[] memory assetDeltas = BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
@@ -240,7 +244,7 @@ contract AuraBribesProcessor is CowSwapSeller {
             AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
 
             IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
-                poolId: AURA_BVEAURA_POOL_ID,
+                poolId: BVE_AURA_WETH_AURA_POOL,
                 kind: IBalancerVault.SwapKind.GIVEN_IN,
                 assetIn: IAsset(address(AURA)),
                 assetOut: IAsset(address(BVE_AURA)),
