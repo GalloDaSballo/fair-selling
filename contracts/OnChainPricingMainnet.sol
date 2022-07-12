@@ -115,7 +115,7 @@ contract OnChainPricingMainnet {
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
-    function  findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
@@ -132,7 +132,7 @@ contract OnChainPricingMainnet {
         if (curveQuote > 0){		   
             (bytes32[] memory curvePools, uint256[] memory curvePoolFees) = _getCurveFees(curvePool);
             quotes[0] = Quote(SwapType.CURVE, curveQuote, curvePools, curvePoolFees);		
-        }else{
+        } else {
             quotes[0] = Quote(SwapType.CURVE, curveQuote, dummyPools, dummyPoolFees);         			
         }
 
