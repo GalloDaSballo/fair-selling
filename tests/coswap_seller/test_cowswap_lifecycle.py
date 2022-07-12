@@ -3,8 +3,6 @@ from brownie import *
 from scripts.send_order import get_cowswap_order
 
 """
-
-  TODO:
     Verify order
     Place order
 """

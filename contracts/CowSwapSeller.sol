@@ -11,13 +11,25 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/cowswap/ICowSettlement.sol";
 
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
+
 // Onchain Pricing Interface
 struct Quote {
-    string name;
+    SwapType name;
     uint256 amountOut;
+    bytes32[] pools; // specific pools involved in the optimal swap path
+    uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
 }
 interface OnChainPricing {
-  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
+  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
 }
 // END OnchainPricing
 
@@ -32,6 +44,8 @@ contract CowSwapSeller is ReentrancyGuard {
     OnChainPricing public pricer; // Contract we will ask for a fair price of before accepting the cowswap order
 
     address public manager;
+
+    address public constant DEV_MULTI = 0xB65cef03b9B89f99517643226d76e286ee999e77;
 
     /// Contract we give allowance to perform swaps
     address public constant RELAYER = 0xC92E8bdf79f0507f65a392b0ab4667716BFE0110;
@@ -54,7 +68,7 @@ contract CowSwapSeller is ReentrancyGuard {
     /// protection mixed in so that signed orders are only valid for specific
     /// GPv2 contracts.
     /// @notice Copy pasted from mainnet because we need this
-    bytes32 public constant domainSeparator = 0xc078f884a2676e1345748b1feace7b0abee5d00ecadb6e574dcdd109a63e8943;
+    bytes32 public immutable domainSeparator;
         // Cowswap Order Data Interface 
     uint256 constant UID_LENGTH = 56;
 
@@ -123,10 +137,13 @@ contract CowSwapSeller is ReentrancyGuard {
     constructor(address _pricer) {
         pricer = OnChainPricing(_pricer);
         manager = msg.sender;
+
+        // Fetch the domainSeparator from Settlement from THIS chain
+        domainSeparator = SETTLEMENT.domainSeparator();
     }
 
     function setPricer(OnChainPricing newPricer) external {
-        require(msg.sender == manager);
+        require(msg.sender == DEV_MULTI);
         pricer = newPricer;
     }
 
@@ -186,7 +203,7 @@ contract CowSwapSeller is ReentrancyGuard {
         return orderUid;
     }
 
-    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual view returns(bool) {
+    function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual returns(bool) {
         // Verify we get the same ID
         // NOTE: technically superfluous as we could just derive the id and setPresignature with that
         // But nice for internal testing
@@ -194,6 +211,11 @@ contract CowSwapSeller is ReentrancyGuard {
         require(keccak256(derivedOrderID) == keccak256(orderUid));
 
         require(orderData.validTo > block.timestamp);
+        require(orderData.receiver == address(this));
+        require(keccak256(abi.encodePacked(orderData.kind)) == keccak256(abi.encodePacked(KIND_SELL)));
+
+        // TODO: This should be done by using a gas cost oracle (see Chainlink)
+        require(orderData.feeAmount <= orderData.sellAmount / 10); // Fee can be at most 1/10th of order
 
         // Check the price we're agreeing to. Before we continue, let's get a full onChain quote as baseline
         address tokenIn = address(orderData.sellToken);
@@ -213,11 +235,11 @@ contract CowSwapSeller is ReentrancyGuard {
     function _doCowswapOrder(Data calldata orderData, bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
-        require(checkCowswapOrder(orderData, orderUid));
+        require(checkCowswapOrder(orderData, orderUid), '!cowLowerPrice');
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
         orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
-        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount);
+        orderData.sellToken.safeApprove(RELAYER, orderData.sellAmount + orderData.feeAmount);
 
         // Once allowance is set, let's setPresignature and the order will happen
         //setPreSignature
