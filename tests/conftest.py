@@ -18,7 +18,6 @@ USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
 DAI_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
-WBTC_WHALE = "0xE78388b4CE79068e89Bf8aA7f218eF6b9AB0e9d0"
 AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
 BVE_CVX = "0xfd05D3C7fe2924020620A8bE4961bBaA747e6305"
 BVE_AURA = "0xBA485b556399123261a5F9c95d413B4f93107407"
@@ -27,24 +26,34 @@ BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
 AURA_POOL_ID = "0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a"
 CVX_BVECVX_POOL = "0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512"
 
+WETH_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
+CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
+WBTC_WHALE = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
 
 ## Contracts ##
+@pytest.fixture
+def swapexecutor():
+  return OnChainSwapMainnet.deploy({"from": a[0]})
+  
 @pytest.fixture
 def pricer():
   return OnChainPricingMainnet.deploy({"from": a[0]})
 
 @pytest.fixture
-def lenient_pricer():
+def lenient_contract():
   ## NOTE: We have 5% slippage on this one
-  return OnChainPricingMainnetLenient.deploy({"from": a[0]})
+  c =  OnChainPricingMainnetLenient.deploy({"from": a[0]})
+  c.setSlippage(499, {"from": accounts.at(c.TECH_OPS(), force=True)})
+
+  return c
 
 @pytest.fixture
-def seller(lenient_pricer):
-  return CowSwapDemoSeller.deploy(lenient_pricer, {"from": a[0]})
+def seller(lenient_contract):
+  return CowSwapDemoSeller.deploy(lenient_contract, {"from": a[0]})
 
 @pytest.fixture
-def processor(lenient_pricer):
-  return VotiumBribesProcessor.deploy(lenient_pricer, {"from": a[0]})
+def processor(lenient_contract):
+  return VotiumBribesProcessor.deploy(lenient_contract, {"from": a[0]})
 
 @pytest.fixture
 def oneE18():
@@ -65,6 +74,10 @@ def balancer_vault():
 @pytest.fixture
 def cvx_bvecvx_pool():
   return interface.ICurvePool(CVX_BVECVX_POOL)
+
+@pytest.fixture
+def crv():
+  return interface.ERC20(CRV)
 
 @pytest.fixture
 def usdc():
@@ -101,6 +114,14 @@ def badger_whale():
 @pytest.fixture
 def cvx_whale():
   return accounts.at(CVX_WHALE, force=True)
+  
+@pytest.fixture
+def weth_whale():
+  return accounts.at(WETH_WHALE, force=True)
+
+@pytest.fixture
+def wbtc_whale():
+  return accounts.at(WBTC_WHALE, force=True)
 
 @pytest.fixture
 def aura_whale():
@@ -137,7 +158,7 @@ def setup_processor(processor, strategy, usdc, usdc_whale, badger, cvx, badger_w
 
   badger.transfer(processor, 6e22, {"from": badger_whale})
 
-  ## Also approve contract access from bveCVX
+  ## Also approve contract access from bveCVX
   interface.ISettV4(bve_cvx).approveContractAccess(processor, {"from": accounts.at(interface.ISettV4(bve_cvx).governance(), force=True)})
 
   ## Notify new round, 28 days before anyone can unlock tokens

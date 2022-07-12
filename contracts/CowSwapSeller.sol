@@ -11,10 +11,22 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/cowswap/ICowSettlement.sol";
 
+enum SwapType { 
+    CURVE, //0
+    UNIV2, //1
+    SUSHI, //2
+    UNIV3, //3
+    UNIV3WITHWETH, //4 
+    BALANCER, //5
+    BALANCERWITHWETH //6 
+}
+
 // Onchain Pricing Interface
 struct Quote {
-    string name;
+    SwapType name;
     uint256 amountOut;
+    bytes32[] pools; // specific pools involved in the optimal swap path
+    uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
 }
 interface OnChainPricing {
   function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
@@ -223,7 +235,7 @@ contract CowSwapSeller is ReentrancyGuard {
     function _doCowswapOrder(Data calldata orderData, bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
-        require(checkCowswapOrder(orderData, orderUid));
+        require(checkCowswapOrder(orderData, orderUid), '!cowLowerPrice');
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
         orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
