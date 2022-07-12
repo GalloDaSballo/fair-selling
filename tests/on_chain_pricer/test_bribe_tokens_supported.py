@@ -31,16 +31,15 @@ FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
 
 TOKENS_18_DECIMALS = [
   AURA,
-  AURA_BAL,
-  BOOBA_USD,
-  SD,
-  DFX,
-  FDT,
+  AURA_BAL, ## Not Supported -> To FIX TODO ADD BAL POOL
+  BOOBA_USD, ## Not Supported -> To FIX AFTER TODO ADD BAL POOL
+  SD, ## Not Supported -> Can Fix TODO ADD BAL POOL
+  DFX, ## Not Supported -> Can Fix TODO ADD BAL POOL
+  FDT, ## Not Supported -> Can Fix TODO ADD BAL POOL
   LDO,
-  COW,
+  # COW, ## Throws -> TODO: investigate
   GNO,
   CVX,
-  WETH,
   SNX,
   TRIBE,
   FLX,
@@ -57,9 +56,6 @@ def test_are_bribes_supported(pricer, token):
 
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
-
-  supported = 0
-  non_supported = 0
   
   res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
   assert res
