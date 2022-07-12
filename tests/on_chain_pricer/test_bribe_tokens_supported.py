@@ -9,14 +9,14 @@ USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
 AURA_BAL = "0x616e8BfA43F920657B3497DBf40D6b1A02D4608d"
 
-BOOBA_USD = "0x06D756861De0724FAd5B5636124e0f252d3C1404"
+SD = "0x30d20208d987713f46dfd34ef128bb16c404d10f" ## Pretty much completely new token https://etherscan.io/token/0x30d20208d987713f46dfd34ef128bb16c404d10f#balances
 
-SD = "0x30d20208d987713f46dfd34ef128bb16c404d10f"
+DFX = "0x888888435FDe8e7d4c54cAb67f206e4199454c60" ## Fairly Liquid: https://etherscan.io/token/0x888888435FDe8e7d4c54cAb67f206e4199454c60#balances
 
-DFX = "0x888888435FDe8e7d4c54cAb67f206e4199454c60"
-FDT = "0xEd1480d12bE41d92F36f5f7bDd88212E381A3677"
+FDT = "0xEd1480d12bE41d92F36f5f7bDd88212E381A3677" ## Illiquid as of today, in vault but no pool I could find https://etherscan.io/token/0xEd1480d12bE41d92F36f5f7bDd88212E381A3677#balances
+
 LDO = "0x5A98FcBEA516Cf06857215779Fd812CA3beF1B32"
-COW = "0xDEf1CA1fb7FBcDC777520aa7f396b4E015F497aB"
+COW = "0xDEf1CA1fb7FBcDC777520aa7f396b4E015F497aB" ## Has pair with GNO and with WETH
 GNO = "0x6810e776880C02933D47DB1b9fc05908e5386b96"
 
 ## Mostly Votium
@@ -32,12 +32,11 @@ FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
 TOKENS_18_DECIMALS = [
   AURA,
   AURA_BAL, ## Not Supported -> To FIX TODO ADD BAL POOL
-  BOOBA_USD, ## Not Supported -> To FIX AFTER TODO ADD BAL POOL
-  SD, ## Not Supported -> Can Fix TODO ADD BAL POOL
-  DFX, ## Not Supported -> Can Fix TODO ADD BAL POOL
-  FDT, ## Not Supported -> Can Fix TODO ADD BAL POOL
+  SD, ## Not Supported -> Cannot fix at this time
+  DFX,
+  FDT, ## Not Supported -> Cannot fix at this time
   LDO,
-  # COW, ## Throws -> TODO: investigate
+  COW,
   GNO,
   CVX,
   SNX,
