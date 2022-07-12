@@ -107,6 +107,13 @@ contract OnChainPricingMainnet {
         uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
     }
 
+    /// @dev Given tokenIn, out and amountIn, returns true if a quote will be non-zero
+    /// @notice Doesn't guarantee optimality, just non-zero
+    function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external returns (bool) {
+        Quote memory result = _findOptimalSwap(tokenIn, tokenOut, amountIn);
+        return result.amountOut > 0;
+    }
+
     /// @dev External function, virtual so you can override, see Lenient Version
     function  findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
