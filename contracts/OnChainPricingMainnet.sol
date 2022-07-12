@@ -110,8 +110,34 @@ contract OnChainPricingMainnet {
     /// @dev Given tokenIn, out and amountIn, returns true if a quote will be non-zero
     /// @notice Doesn't guarantee optimality, just non-zero
     function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external returns (bool) {
-        Quote memory result = _findOptimalSwap(tokenIn, tokenOut, amountIn);
-        return result.amountOut > 0;
+        // Sorted by "assumed" reverse worst case
+        // Go for higher gas cost checks assuming they are offering best precision / good price
+
+        // If no pool this is cheap, else highly likely there's a price
+        if(getBalancerPrice(tokenIn, amountIn, tokenOut) > 0) {
+            return true;
+        }
+
+        // If no pool this is fairly cheap, else highly likely there's a price
+        if(getUniV3Price(tokenIn, amountIn, tokenOut) > 0) {
+            return true;
+        }
+
+        // Highly likely to have any random token here
+        if(getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn) > 0) {
+            return true;
+        }
+
+        // Otherwise it's probably on Sushi
+        if(getUniPrice(SUSHI_ROUTER, tokenIn, tokenOut, amountIn) > 0) {
+            return true;
+        }
+
+        // Curve at this time has great execution prices but low selection
+        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        if (curveQuote > 0){
+            return true;
+        }
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
