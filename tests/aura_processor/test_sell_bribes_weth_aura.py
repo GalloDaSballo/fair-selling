@@ -64,11 +64,6 @@ def test_sell_bribes_for_weth_must_buy_weth_cant_sell_weth(setup_aura_processor,
     setup_aura_processor.sellBribeForWeth(data, uid, {"from": manager})
 
 
-  order_details = get_cowswap_order(setup_aura_processor, weth, usdc, sell_amount)
-
-  data = order_details.order_data
-  uid = order_details.order_uid
-
   data[1] = weth.address ## Data.sellToken
 
   ## Fails because UID is also invalid (Can't get API order of WETH-WETH)
