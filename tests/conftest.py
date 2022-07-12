@@ -23,7 +23,7 @@ BVE_CVX = "0xfd05D3C7fe2924020620A8bE4961bBaA747e6305"
 BVE_AURA = "0xBA485b556399123261a5F9c95d413B4f93107407"
 AURA_WHALE = "0x43B17088503F4CE1AED9fB302ED6BB51aD6694Fa"
 BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
-AURA_POOL_ID = "0x9f40f06ea32304dc777ecc661609fb6b0c5daf4a00020000000000000000026a"
+BVE_AURA_WETH_AURA_POOL_ID = "0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267"
 CVX_BVECVX_POOL = "0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512"
 
 WETH_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
@@ -193,28 +193,28 @@ def add_aura_liquidity(balancer_vault, aura_whale, aura, bve_aura):
   interface.IVault(BVE_AURA).deposit(liquidity_amount, account)
   liquidity_amount = bve_aura.balanceOf(AURA_WHALE)
   join_kind = 1
-  balances = [liquidity_amount, liquidity_amount]
+  balances = [liquidity_amount, 0, liquidity_amount]
   abi = ['uint256', 'uint256[]', 'uint256']
   user_data = [join_kind, balances, 0]
   user_data_encoded = eth_abi.encode_abi(abi, user_data)
-  join_request = ([BVE_AURA, AURA], balances, user_data_encoded, False)
-  balancer_vault.joinPool(AURA_POOL_ID, AURA_WHALE, AURA_WHALE, join_request, account)  
+  join_request = ([BVE_AURA, WETH, AURA], balances, user_data_encoded, False)
+  balancer_vault.joinPool(BVE_AURA_WETH_AURA_POOL_ID, AURA_WHALE, AURA_WHALE, join_request, account)  
       
 @pytest.fixture
 def make_aura_pool_unprofitable(balancer_vault, aura_whale, add_aura_liquidity):
   # Buy BVE_AURA to imbalance pool
-  pool_purchase_amount = balancer_vault.getPoolTokens(AURA_POOL_ID)[1][0]
-  swap = (AURA_POOL_ID, 0, AURA, BVE_AURA, pool_purchase_amount, 0)
+  pool_purchase_amount = balancer_vault.getPoolTokens(BVE_AURA_WETH_AURA_POOL_ID)[1][0]
+  swap = (BVE_AURA_WETH_AURA_POOL_ID, 0, AURA, BVE_AURA, pool_purchase_amount // 4, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False)
   balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 
 @pytest.fixture
 def make_aura_pool_profitable(balancer_vault, aura_whale, add_aura_liquidity, bve_aura):
   # Buy AURA to imbalance pool
-  pool_purchase_amount = balancer_vault.getPoolTokens(AURA_POOL_ID)[1][1]
+  pool_purchase_amount = balancer_vault.getPoolTokens(BVE_AURA_WETH_AURA_POOL_ID)[1][2]
   interface.IVault(BVE_AURA).deposit(pool_purchase_amount, {'from': aura_whale})
-  deposit_amount = bve_aura.balanceOf(AURA_WHALE)
-  swap = (AURA_POOL_ID, 0, BVE_AURA, AURA, deposit_amount, 0)
+  deposit_amount = bve_aura.balanceOf(AURA_WHALE) // 4
+  swap = (BVE_AURA_WETH_AURA_POOL_ID, 0, BVE_AURA, AURA, deposit_amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False) 
   balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
 

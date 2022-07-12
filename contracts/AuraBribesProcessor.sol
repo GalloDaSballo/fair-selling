@@ -21,7 +21,6 @@ import {SafeERC20} from "@oz/token/ERC20/utils/SafeERC20.sol";
 contract AuraBribesProcessor is CowSwapSeller {
     using SafeERC20 for IERC20;
 
-
     // All events are token / amount
     event SentBribeToGovernance(address indexed token, uint256 amount);
     event SentBribeToTree(address indexed token, uint256 amount);
@@ -59,7 +58,6 @@ contract AuraBribesProcessor is CowSwapSeller {
     address public constant TREASURY = 0xA9ed98B5Fb8428d68664f3C5027c62A10d45826b;
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
-
 
     /// BVE_AURA, WETH, AURA
     /// https://app.balancer.fi/#/pool/0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267
@@ -109,8 +107,8 @@ contract AuraBribesProcessor is CowSwapSeller {
 
             // If manager rqs to emit in time, treasury still receives a fee
             if(!timeHasExpired && msg.sender == manager) {
+                
                 // Take a fee here
-
                 uint256 fee = amount * OPS_FEE / MAX_BPS;
                 token.safeTransfer(TREASURY, fee);
 
