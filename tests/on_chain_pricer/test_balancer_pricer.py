@@ -2,7 +2,7 @@ import brownie
 from brownie import *
 
 import sys
-from get_price import get_coingecko_price, get_coinmarketcap_price, get_coinmarketcap_metadata
+from scripts.get_price import get_coingecko_price, get_coinmarketcap_price, get_coinmarketcap_metadata
 
 import pytest
 
