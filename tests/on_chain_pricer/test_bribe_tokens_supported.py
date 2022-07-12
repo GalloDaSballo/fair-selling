@@ -1,3 +1,4 @@
+import pytest
 from brownie import *
 
 ## NOTE: Removed as we're testing with 1e18
@@ -47,7 +48,8 @@ TOKENS_18_DECIMALS = [
   FXS
 ]
 
-def test_are_bribes_supported(pricer):
+@pytest.mark.parametrize("token", TOKENS_18_DECIMALS)
+def test_are_bribes_supported(pricer, token):
   """
     Given a bunch of tokens historically used as bribes, verifies the pricer will return non-zero value
     We sell all to WETH which is pretty realistic
@@ -59,14 +61,7 @@ def test_are_bribes_supported(pricer):
   supported = 0
   non_supported = 0
   
-  for token in TOKENS_18_DECIMALS:
-    res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
-    if(res == True):
-      supported += 1
-    else:
-      non_supported += 1
-
-  ## We support all
-  assert non_supported == 0
+  res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
+  assert res
 
 
