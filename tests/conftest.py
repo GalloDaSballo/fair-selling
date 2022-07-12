@@ -34,12 +34,17 @@ def pricer():
   return OnChainPricingMainnet.deploy({"from": a[0]})
 
 @pytest.fixture
-def seller(pricer):
-  return CowSwapDemoSeller.deploy(pricer, {"from": a[0]})
+def lenient_pricer():
+  ## NOTE: We have 5% slippage on this one
+  return OnChainPricingMainnetLenient.deploy({"from": a[0]})
 
 @pytest.fixture
-def processor(pricer):
-  return VotiumBribesProcessor.deploy(pricer, {"from": a[0]})
+def seller(lenient_pricer):
+  return CowSwapDemoSeller.deploy(lenient_pricer, {"from": a[0]})
+
+@pytest.fixture
+def processor(lenient_pricer):
+  return VotiumBribesProcessor.deploy(lenient_pricer, {"from": a[0]})
 
 @pytest.fixture
 def oneE18():
