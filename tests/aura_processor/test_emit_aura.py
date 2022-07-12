@@ -36,13 +36,12 @@ def test_swap_aura_and_emit_with_swap(setup_aura_processor, manager, aura, bve_a
 
 def test_swap_aura_and_emit_with_deposit(setup_aura_processor, manager, aura, bve_aura, make_aura_pool_unprofitable):
   # Make pool swap less profitable
-  
   bve_balance_before = bve_aura.balanceOf(setup_aura_processor.BADGER_TREE())
   assert aura.balanceOf(setup_aura_processor) > 0
 
-  tx = setup_aura_processor.swapAURATobveAURAAndEmit({"from": manager})
-
   bve_supply = bve_aura.totalSupply()
+  
+  tx = setup_aura_processor.swapAURATobveAURAAndEmit({"from": manager})
 
   assert bve_aura.balanceOf(setup_aura_processor.BADGER_TREE()) > bve_balance_before
   assert aura.balanceOf(setup_aura_processor.BADGER_TREE()) == 0 ## All aura has been emitted

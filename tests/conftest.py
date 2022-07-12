@@ -204,16 +204,16 @@ def add_aura_liquidity(balancer_vault, aura_whale, aura, bve_aura):
 def make_aura_pool_unprofitable(balancer_vault, aura_whale, add_aura_liquidity):
   # Buy BVE_AURA to imbalance pool
   pool_purchase_amount = balancer_vault.getPoolTokens(BVE_AURA_WETH_AURA_POOL_ID)[1][0]
-  swap = (BVE_AURA_WETH_AURA_POOL_ID, 0, AURA, BVE_AURA, pool_purchase_amount // 4, 0)
+  swap = (BVE_AURA_WETH_AURA_POOL_ID, 0, AURA, BVE_AURA, pool_purchase_amount // 4, 0) ## Can only buy up to 30% of pool
   fund = (AURA_WHALE, False, AURA_WHALE, False)
-  balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
+  balancer_vault.swap(swap, fund, 1, MAX_INT, {'from': aura_whale})
 
 @pytest.fixture
 def make_aura_pool_profitable(balancer_vault, aura_whale, add_aura_liquidity, bve_aura):
   # Buy AURA to imbalance pool
   pool_purchase_amount = balancer_vault.getPoolTokens(BVE_AURA_WETH_AURA_POOL_ID)[1][2]
   interface.IVault(BVE_AURA).deposit(pool_purchase_amount, {'from': aura_whale})
-  deposit_amount = bve_aura.balanceOf(AURA_WHALE) // 4
+  deposit_amount = bve_aura.balanceOf(AURA_WHALE) // 4 ## Can only buy up to 30% of pool
   swap = (BVE_AURA_WETH_AURA_POOL_ID, 0, BVE_AURA, AURA, deposit_amount, 0)
   fund = (AURA_WHALE, False, AURA_WHALE, False) 
   balancer_vault.swap(swap, fund, 0, MAX_INT, {'from': aura_whale})
