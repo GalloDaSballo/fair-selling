@@ -188,12 +188,14 @@ contract AuraBribesProcessor is CowSwapSeller {
         assets[0] = IAsset(address(AURA));
         assets[1] = IAsset(address(BVE_AURA));
 
+        bytes memory emptyBytes = new bytes(0);
+
         IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
             poolId: BVE_AURA_WETH_AURA_POOL,
             assetInIndex: 0,
             assetOutIndex: 1,
             amount: totalAURA,
-            userData: new bytes(0)
+            userData: emptyBytes
         });
 
         IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
@@ -247,7 +249,7 @@ contract AuraBribesProcessor is CowSwapSeller {
                 assetIn: IAsset(address(AURA)),
                 assetOut: IAsset(address(BVE_AURA)),
                 amount: totalAURA,
-                userData: new bytes(0)
+                userData: emptyBytes
             });
 
             uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, fromPurchase, block.timestamp);
