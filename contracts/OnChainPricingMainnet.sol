@@ -91,11 +91,17 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_OHM_DAI_WETH_POOLID = 0xc45d42f801105e861e86658648e3678ad7aa70f900010000000000000000011e;
     address public constant OHM = 0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5;
     address public constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    bytes32 public constant BALANCERV2_COW_WETH_POOLID = 0xde8c195aa41c11a0c4787372defbbddaa31306d2000200000000000000000181;
     bytes32 public constant BALANCERV2_COW_GNO_POOLID = 0x92762b42a06dcdddc5b7362cfb01e631c4d44b40000200000000000000000182;
     address public constant COW = 0xDEf1CA1fb7FBcDC777520aa7f396b4E015F497aB;
     bytes32 public constant BALANCERV2_AURA_WETH_POOLID = 0xc29562b045d80fd77c69bec09541f5c16fe20d9d000200000000000000000251;
     address public constant AURA = 0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF;
     bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
+    
+    address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
+    bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
+
+
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
     uint256 public constant CURVE_FEE_SCALE = 100000;
@@ -113,8 +119,9 @@ contract OnChainPricingMainnet {
         // Sorted by "assumed" reverse worst case
         // Go for higher gas cost checks assuming they are offering best precision / good price
 
-        // If no pool this is cheap, else highly likely there's a price
-        if(getBalancerPrice(tokenIn, amountIn, tokenOut) > 0) {
+        // If There's a Bal Pool, since we have to hardcode, then the price is probably non-zero
+        bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
+        if (poolId != BALANCERV2_NONEXIST_POOLID){
             return true;
         }
 
@@ -356,7 +363,7 @@ contract OnChainPricingMainnet {
         int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
 
         // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
+        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
     }
 	
     /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2
@@ -415,12 +422,19 @@ contract OnChainPricingMainnet {
             return BALANCERV2_AKITA_WETH_POOLID;
         } else if ((tokenIn == WETH && tokenOut == OHM) || (tokenOut == WETH && tokenIn == OHM) || (tokenIn == DAI && tokenOut == OHM) || (tokenOut == DAI && tokenIn == OHM)){
             return BALANCERV2_OHM_DAI_WETH_POOLID;
-        } else if ((tokenIn == GNO && tokenOut == COW) || (tokenOut == COW && tokenIn == GNO)){
+        } else if ((tokenIn == COW && tokenOut == GNO) || (tokenOut == COW && tokenIn == GNO)){
             return BALANCERV2_COW_GNO_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == COW) || (tokenOut == WETH && tokenIn == COW)){
+            return BALANCERV2_COW_WETH_POOLID;
         } else if ((tokenIn == WETH && tokenOut == AURA) || (tokenOut == WETH && tokenIn == AURA)){
             return BALANCERV2_AURA_WETH_POOLID;
         } else if ((tokenIn == BALWETHBPT && tokenOut == AURABAL) || (tokenOut == BALWETHBPT && tokenIn == AURABAL)){
             return BALANCERV2_AURABAL_BALWETH_POOLID;
+            // TODO CHANGE
+        } else if ((tokenIn == WETH && tokenOut == AURABAL) || (tokenOut == WETH && tokenIn == AURABAL)){
+            return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == GRAVIAURA) || (tokenOut == WETH && tokenIn == GRAVIAURA)){
+            return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
         } else{
             return BALANCERV2_NONEXIST_POOLID;
         }		
