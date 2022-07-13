@@ -36,6 +36,10 @@ def swapexecutor():
   return OnChainSwapMainnet.deploy({"from": a[0]})
   
 @pytest.fixture
+def feedpricer():
+  return OnChainPricingMainnetFeedConnectors.deploy({"from": a[0]})
+  
+@pytest.fixture
 def pricer():
   return OnChainPricingMainnet.deploy({"from": a[0]})
 

@@ -22,6 +22,10 @@ contract OnChainPricingMainnetFeedConnectors is OnChainPricingMainnet {
 
     // privileged to enable/disable resource-consuming quote paths
     address public constant TECH_OPS = 0x86cbD0ce0c087b482782c181dA8d191De18C8275;
+	
+    constructor(){
+        feedConnectorsEnabled = true;
+    }
     
     function setFeedConnectorsEnabled(bool _enable) external {
         require(msg.sender == TECH_OPS, "Only TechOps");
