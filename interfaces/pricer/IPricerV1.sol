@@ -25,7 +25,10 @@ enum SwapType {
     UNIV3WITHWETHWBTC, //15      [tokenIn -> WETH -> WBTC -> tokenOut]
     UNIV3WITHWBTCWETH, //16      [tokenIn -> WBTC -> WETH -> tokenOut]
     SUSHIWITHWETHWBTC, //17      [tokenIn -> WETH -> WBTC -> tokenOut]
-    SUSHIWITHWBTCWETH //18      [tokenIn -> WBTC -> WETH -> tokenOut]
+    SUSHIWITHWBTCWETH, //18      [tokenIn -> WBTC -> WETH -> tokenOut]
+	
+    /// Price Feed
+    PRICEFEED //19
 }
 
 struct Quote {

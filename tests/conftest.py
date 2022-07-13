@@ -14,6 +14,7 @@ BADGER = "0x3472A5A71965499acd81997a54BBA8D852C6E53d"
 CVX = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"
 DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
 WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+FXS = "0x3432b6a60d23ca0dfca7761b7ab56459d9c964d0"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
@@ -62,6 +63,10 @@ def processor(lenient_contract):
 @pytest.fixture
 def oneE18():
   return 1000000000000000000
+
+@pytest.fixture
+def fxs():
+  return interface.ERC20(FXS)
 
 @pytest.fixture
 def wbtc():

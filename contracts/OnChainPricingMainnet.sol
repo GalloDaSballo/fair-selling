@@ -40,7 +40,7 @@ import "../interfaces/chainlink/AggregatorV3Interface.sol";
 ///    SUSHI   |    Y*      |      -            |          Y               |            Y
 ///    UNIV3   |    Y*      |      Y            |          Y               |            Y
 ///   BALANCER |    Y*      |      Y            |          -               |            -
-///  PRICE FEED|    Y       |      -            |          -               |            -
+///  PRICE FEED|    Y*      |      -            |          -               |            -
 ///
 ///-----------------------------------------------------------------------------------------------------
 /// 
@@ -51,6 +51,18 @@ contract OnChainPricingMainnet is OnChainPricing {
     // e.g on Fantom, WETH would be wFTM
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 	
+    /// popular bribe tokens:  
+    /// https://llama.airforce/#/bribes/rounds
+    /// https://hiddenhand.finance/
+    address public constant CVX = 0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B;
+    address public constant SNX = 0xC011a73ee8576Fb46F5E1c5751cA3B9Fe0af2a6F;
+    address public constant TRIBE = 0xc7283b66Eb1EB5FB86327f08e1B5816b0720212B;
+    address public constant FXS = 0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0;
+    address public constant ALCX = 0xdBdb4d16EdA451D0503b854CF79D55697F90c8DF;
+    address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant TUSD = 0x0000000000085d4780B73119b644AE5ecd22b376;
+    address public constant SPELL = 0x090185f2135308BaD17527004364eBcC2D37e5F6;
+	
     /// Worst case scenario for Pricing is TokenA -> ConnectorA -> ConnectorB -> TokenB
     /// where ConnectorA and B are tokens we do have a feed for, and A and B for TA -> CA and CB -> TB are supported (quote is nonZero)
     /// Supported connector tokens on Ethereum, paired with native/gas token, e.g., WETH in Ethereum
@@ -58,8 +70,18 @@ contract OnChainPricingMainnet is OnChainPricing {
     bool public feedConnectorsEnabled = false;
     address public constant WBTC = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
     address public constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+	
+    /// Price Feed (ChainLink)
     address public constant BTC_ETH_FEED = 0xdeb288F737066589598e9214E782fa5A8eD689e8;
     address public constant ETH_USD_FEED = 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419;
+    address public constant LDO_ETH_FEED = 0x4e844125952D32AcdF339BE976c98E22F6F318dB;
+    address public constant GNO_ETH_FEED = 0xA614953dF476577E90dcf4e3428960e221EA4727;
+    address public constant CVX_ETH_FEED = 0xC9CbF687f43176B302F03f5e58470b77D07c61c6;
+    address public constant SNX_ETH_FEED = 0x79291A9d692Df95334B1a0B3B4AE6bC606782f8c;
+    address public constant TRIBE_ETH_FEED = 0x84a24deCA415Acc0c395872a9e6a63E27D6225c8;
+    address public constant ALCX_ETH_FEED = 0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f;
+    address public constant FXS_USD_FEED = 0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f;
+    address public constant SPELL_USD_FEED = 0x194a9AaF2e0b67c35915cD01101585A33Fe25CAa;
 
     /// == Uni V2 Like Routers || These revert on non-existent pair == //
     // UniV2
@@ -114,7 +136,8 @@ contract OnChainPricingMainnet is OnChainPricing {
     
     address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
     bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
-
+    address public constant FDT = 0xEd1480d12bE41d92F36f5f7bDd88212E381A3677;
+    bytes32 public constant BALANCERV2_FDT_WETH_POOLID = 0x2d344a84bac123660b021eebe4eb6f12ba25fe8600020000000000000000018a;
 
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
@@ -125,6 +148,11 @@ contract OnChainPricingMainnet is OnChainPricing {
     function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external returns (bool) {
         // Sorted by "assumed" reverse worst case
         // Go for higher gas cost checks assuming they are offering best precision / good price
+		
+        // Try with price feed at the beginning directly 
+        if (quoteWithPriceFeed(tokenIn, tokenOut, amountIn) > 0){
+            return true;
+        }
 
         // If There's a Bal Pool, since we have to hardcode, then the price is probably non-zero
         bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
@@ -140,6 +168,14 @@ contract OnChainPricingMainnet is OnChainPricing {
 
         // Highly likely to have any random token here
         if(getUniPrice(UNIV2_ROUTER, tokenIn, tokenOut, amountIn) > 0) {
+            return true;
+        }
+
+        // Try with connectors in between with Uniswap V2 since it got a lot of exotic tokens
+        if (getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, USDC, WETH) > 0) {
+            return true;
+        }
+        if (getUniPriceWithConnectorFeed(UNIV2_ROUTER, tokenIn, amountIn, tokenOut, WETH, USDC) > 0) {
             return true;
         }
 
@@ -231,7 +267,16 @@ contract OnChainPricingMainnet is OnChainPricing {
                 }
             }
         }
-
+        
+        /// Try with Price Feed as last resort
+        if (bestQuote.amountOut <= 0){
+            uint256 _feedQuote = quoteWithPriceFeed(tokenIn, tokenOut, amountIn);
+            if (_feedQuote > 0){
+                Quote memory _feedQ = Quote(SwapType.PRICEFEED, _feedQuote, dummyPools, dummyPoolFees);
+                return _feedQ; 				
+            }
+        }
+		
         return bestQuote;
     }
 
@@ -551,6 +596,8 @@ contract OnChainPricingMainnet is OnChainPricing {
             return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
         } else if ((tokenIn == WETH && tokenOut == GRAVIAURA) || (tokenOut == WETH && tokenIn == GRAVIAURA)){
             return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
+        } else if ((tokenIn == WETH && tokenOut == FDT) || (tokenOut == WETH && tokenIn == FDT)){
+            return BALANCERV2_FDT_WETH_POOLID;
         } else{
             return BALANCERV2_NONEXIST_POOLID;
         }		
@@ -656,11 +703,7 @@ contract OnChainPricingMainnet is OnChainPricing {
         {
             (uint256 _univ3WithWETHUSDCQuote, uint256 _univ3WithWETHUSDCFee1, uint256 _univ3WithWETHUSDCFee2, uint256 _univ3WithWETHUSDCFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WETH, USDC);
             if (_univ3WithWETHUSDCQuote > 0){
-                uint256[] memory univ3WithWETHUSDCPoolFees = new uint256[](3);
-                univ3WithWETHUSDCPoolFees[0] = _univ3WithWETHUSDCFee1;
-                univ3WithWETHUSDCPoolFees[1] = _univ3WithWETHUSDCFee2;
-                univ3WithWETHUSDCPoolFees[2] = _univ3WithWETHUSDCFee3;
-                quotes[_startIdx + 8] = Quote(SwapType.UNIV3WITHWETHUSDC, _univ3WithWETHUSDCQuote, dummyPools, univ3WithWETHUSDCPoolFees);			
+                quotes[_startIdx + 8] = Quote(SwapType.UNIV3WITHWETHUSDC, _univ3WithWETHUSDCQuote, dummyPools, _fillUniV3Fees(_univ3WithWETHUSDCFee1, _univ3WithWETHUSDCFee2, _univ3WithWETHUSDCFee3));			
             } else{
                 quotes[_startIdx + 8] = Quote(SwapType.UNIV3WITHWETHUSDC, _univ3WithWETHUSDCQuote, dummyPools, dummyPoolFees);				
             }
@@ -668,11 +711,7 @@ contract OnChainPricingMainnet is OnChainPricing {
         {		
             (uint256 _univ3WithUSDCWETHQuote, uint256 _univ3WithUSDCWETHFee1, uint256 _univ3WithUSDCWETHFee2, uint256 _univ3WithUSDCWETHFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, USDC, WETH);
             if (_univ3WithUSDCWETHQuote > 0){
-                uint256[] memory univ3WithUSDCWETHPoolFees = new uint256[](3);
-                univ3WithUSDCWETHPoolFees[0] = _univ3WithUSDCWETHFee1;
-                univ3WithUSDCWETHPoolFees[1] = _univ3WithUSDCWETHFee2;
-                univ3WithUSDCWETHPoolFees[2] = _univ3WithUSDCWETHFee3;
-                quotes[_startIdx + 9] = Quote(SwapType.UNIV3WITHUSDCWETH, _univ3WithUSDCWETHQuote, dummyPools, univ3WithUSDCWETHPoolFees);			
+                quotes[_startIdx + 9] = Quote(SwapType.UNIV3WITHUSDCWETH, _univ3WithUSDCWETHQuote, dummyPools, _fillUniV3Fees(_univ3WithUSDCWETHFee1, _univ3WithUSDCWETHFee2, _univ3WithUSDCWETHFee3));			
             } else{
                 quotes[_startIdx + 9] = Quote(SwapType.UNIV3WITHUSDCWETH, _univ3WithUSDCWETHQuote, dummyPools, dummyPoolFees);						
             }            	
@@ -681,11 +720,7 @@ contract OnChainPricingMainnet is OnChainPricing {
         {
             (uint256 _univ3WithWETHWBTCQuote, uint256 _univ3WithWETHWBTCFee1, uint256 _univ3WithWETHWBTCFee2, uint256 _univ3WithWETHWBTCFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WETH, WBTC); 
             if (_univ3WithWETHWBTCQuote > 0){
-                uint256[] memory univ3WithWETHWBTCPoolFees = new uint256[](3);
-                univ3WithWETHWBTCPoolFees[0] = _univ3WithWETHWBTCFee1;
-                univ3WithWETHWBTCPoolFees[1] = _univ3WithWETHWBTCFee2;
-                univ3WithWETHWBTCPoolFees[2] = _univ3WithWETHWBTCFee3;
-                quotes[_startIdx + 10] = Quote(SwapType.UNIV3WITHWETHWBTC, _univ3WithWETHWBTCQuote, dummyPools, univ3WithWETHWBTCPoolFees);			
+                quotes[_startIdx + 10] = Quote(SwapType.UNIV3WITHWETHWBTC, _univ3WithWETHWBTCQuote, dummyPools, _fillUniV3Fees(_univ3WithWETHWBTCFee1, _univ3WithWETHWBTCFee2, _univ3WithWETHWBTCFee3));			
             } else{
                 quotes[_startIdx + 10] = Quote(SwapType.UNIV3WITHWETHWBTC, _univ3WithWETHWBTCQuote, dummyPools, dummyPoolFees);						
             }          	
@@ -693,18 +728,103 @@ contract OnChainPricingMainnet is OnChainPricing {
         {		
             (uint256 _univ3WithWBTCWETHQuote, uint256 _univ3WithWBTCWETHFee1, uint256 _univ3WithWBTCWETHFee2, uint256 _univ3WithWBTCWETHFee3) = getUniV3PriceWithConnectorFeed(tokenIn, amountIn, tokenOut, WBTC, WETH); 
             if (_univ3WithWBTCWETHQuote > 0){
-                uint256[] memory univ3WithWBTCWETHPoolFees = new uint256[](3);
-                univ3WithWBTCWETHPoolFees[0] = _univ3WithWBTCWETHFee1;
-                univ3WithWBTCWETHPoolFees[1] = _univ3WithWBTCWETHFee2;
-                univ3WithWBTCWETHPoolFees[2] = _univ3WithWBTCWETHFee3;
-                quotes[_startIdx + 11] = Quote(SwapType.UNIV3WITHWBTCWETH, _univ3WithWBTCWETHQuote, dummyPools, univ3WithWBTCWETHPoolFees);			
+                quotes[_startIdx + 11] = Quote(SwapType.UNIV3WITHWBTCWETH, _univ3WithWBTCWETHQuote, dummyPools, _fillUniV3Fees(_univ3WithWBTCWETHFee1, _univ3WithWBTCWETHFee2, _univ3WithWBTCWETHFee3));			
             } else{
                 quotes[_startIdx + 12] = Quote(SwapType.UNIV3WITHWBTCWETH, _univ3WithWBTCWETHQuote, dummyPools, dummyPoolFees);					
             }           
         }
     }
 	
-    /// === Price Feed Functions === /// 
+    /// @dev internal function to make code more compact and readable
+    function _fillUniV3Fees(uint256 _fee1, uint256 _fee2, uint256 _fee3) internal view returns (uint256[] memory){
+        uint256[] memory _fees = new uint256[](3);
+        _fees[0] = _fee1;
+        _fees[1] = _fee2;
+        _fees[2] = _fee3;
+        return _fees;
+    }
+	
+    /// === Price Feed Functions === ///  
+	
+    /// @return swap quote from _tokenA to _tokenB for given _amountTokenA if there is a price feed available
+    /// @dev one of _tokenA and _tokenB has to be WETH or stablecoins (USDC/USDT/DAI/TUSD)
+    function quoteWithPriceFeed(address _tokenA, address _tokenB, uint256 _amountTokenA) public view returns (uint256){
+	
+        bool _tokenAStablecoin = _stablecoin(_tokenA);
+        bool _tokenBStablecoin = _stablecoin(_tokenB);
+        bool _tokenAFeedQuoteToken = (_tokenA == WETH || _tokenAStablecoin);
+        bool _tokenBFeedQuoteToken = (_tokenB == WETH || _tokenBStablecoin);
+		
+        if (!_tokenAFeedQuoteToken && !_tokenBFeedQuoteToken){
+            return 0;
+        }
+		
+        uint256 _rate = 0;
+        uint256 feedDecimal = 1e18;	
+	
+        if (_tokenB == LDO || _tokenA == LDO){
+            _rate = _processFeed(feedDecimal, LDO_ETH_FEED, false, (_tokenB == LDO), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == FXS || _tokenB == FXS){
+            _rate = _processFeed(feedDecimal, FXS_USD_FEED, true, (_tokenB == FXS), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == GNO || _tokenB == GNO){
+            _rate = _processFeed(feedDecimal, GNO_ETH_FEED, false, (_tokenB == GNO), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == CVX || _tokenB == CVX){
+            _rate = _processFeed(feedDecimal, CVX_ETH_FEED, false, (_tokenB == CVX), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == SNX || _tokenB == SNX){
+            _rate = _processFeed(feedDecimal, SNX_ETH_FEED, false, (_tokenB == SNX), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == TRIBE || _tokenB == TRIBE){
+            _rate = _processFeed(feedDecimal, TRIBE_ETH_FEED, false, (_tokenB == TRIBE), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == ALCX || _tokenB == ALCX){
+            _rate = _processFeed(feedDecimal, ALCX_ETH_FEED, false, (_tokenB == ALCX), _tokenAStablecoin, _tokenBStablecoin);
+        } else if (_tokenA == SPELL || _tokenB == SPELL){
+            _rate = _processFeed(feedDecimal, SPELL_USD_FEED, true, (_tokenB == SPELL), _tokenAStablecoin, _tokenBStablecoin);
+        } 
+			
+        if (_rate <= 0){	
+            return 0;
+        }
+
+        uint256 _decimalA = 10 ** IERC20Metadata(_tokenA).decimals();
+        uint256 _decimalB = 10 ** IERC20Metadata(_tokenB).decimals();
+        return _amountTokenA * _rate * _decimalB / _decimalA / feedDecimal;
+    }
+	
+    /// @dev processing given feed with additional ETH_USD_FEED in between if necessary
+    /// @param _feed for which returned rate would be processed
+    /// @param _usdFeed indicate whether this _feed is a USD-quoted feed or ETH-quoted feed
+    /// @param _fromFeedQuoteToken indicate whether the reciprocal of returned rate (opposite direction of pricing) from _feed should be taken for final result
+    /// @param _fromStablecoin indicate whether the expected quote is for a swap initiated using stablecoin
+    /// @param _toStablecoin indicate whether the expected quote is for a swap aimed for stablecoin
+    /// @return the processed result in given _decimal
+    function _processFeed(uint256 _decimal, address _feed, bool _usdFeed, bool _fromFeedQuoteToken, bool _fromStablecoin, bool _toStablecoin) internal view returns (uint256) {
+	    
+        uint256 _rate;
+		
+        if (!_fromFeedQuoteToken){
+            /// from someToken -> WETH or someToken -> Stablecoin
+            _rate = _decimal * _getLatestPrice(_feed) / (10 ** IAggregatorV3(_feed).decimals());
+			
+            /// convert rate using ETH_USD_FEED
+            if ((_toStablecoin && !_usdFeed) || (!_toStablecoin && _usdFeed)){
+                _rate = _rate * latestUSDFeed(_toStablecoin) / 1e18;
+            }
+        } else{	
+            /// from WETH -> someToken or Stablecoin -> someToken
+            _rate = _decimal * (10 ** IAggregatorV3(_feed).decimals()) / _getLatestPrice(_feed);	
+			
+            /// convert rate using ETH_USD_FEED
+            if ((_fromStablecoin && !_usdFeed) || (!_fromStablecoin && _usdFeed)){
+                _rate = _rate * latestUSDFeed(!_fromStablecoin) / 1e18;
+            }
+        }     
+
+        return _rate;		
+    }
+	
+    /// @return if given token is a supported stablecoin 
+    function _stablecoin(address _token) internal view returns (bool) {
+        return _token == USDC || _token == USDT || _token == DAI || _token == TUSD;
+    }
 	
     /// @return exchange output amount from connector _tokenA to connector _tokenB for given _amountTokenA
     /// @dev all supported connectors with possible swap direction are:
