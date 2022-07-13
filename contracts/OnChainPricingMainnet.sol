@@ -338,7 +338,7 @@ contract OnChainPricingMainnet {
     /// @dev query with the address of the token0 & token1 & the fee tier
     /// @return the uniswap v3 pool address
     function _getUniV3PoolAddress(address token0, address token1, uint24 fee) internal pure returns (address) {
-        bytes32 addr = keccak256(abi.encodePacked(hex'ff', UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
+        bytes32 addr = keccak256(abi.encodePacked(hex"ff", UNIV3_FACTORY, keccak256(abi.encode(token0, token1, fee)), UNIV3_POOL_INIT_CODE_HASH));
         return address(uint160(uint256(addr)));
     }
 
