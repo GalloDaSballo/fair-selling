@@ -235,7 +235,7 @@ contract CowSwapSeller is ReentrancyGuard {
     function _doCowswapOrder(Data calldata orderData, bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
-        require(checkCowswapOrder(orderData, orderUid), '!cowLowerPrice');
+        require(checkCowswapOrder(orderData, orderUid), "!cowLowerPrice");
 
         // Because swap is looking good, check we have the amount, then give allowance to the Cowswap Router
         orderData.sellToken.safeApprove(RELAYER, 0); // Set to 0 just in case
