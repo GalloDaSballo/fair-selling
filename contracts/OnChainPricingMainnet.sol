@@ -12,6 +12,7 @@ import "../interfaces/uniswap/IUniswapRouterV2.sol";
 import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
+import "../interfaces/balancer/IBalancerV2WeightedPool.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
 
@@ -58,7 +59,7 @@ contract OnChainPricingMainnet {
     address public constant UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000];
+    uint24[3] univ3_fees = [uint24(100), 500, 3000];//, 10000]; //skip last fee for exotic tokens
 	
     // BalancerV2 Vault
     address public constant BALANCERV2_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -175,12 +176,12 @@ contract OnChainPricingMainnet {
 
         quotes[3] = Quote(SwapType.UNIV3, getUniV3Price(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
 
-        quotes[4] = Quote(SwapType.BALANCER, getBalancerPrice(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
+        quotes[4] = Quote(SwapType.BALANCER, getBalancerPriceAnalytically(tokenIn, amountIn, tokenOut), dummyPools, dummyPoolFees);
 
         if(!wethInvolved){
             quotes[5] = Quote(SwapType.UNIV3WITHWETH, getUniV3PriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);	
 
-            quotes[6] = Quote(SwapType.BALANCERWITHWETH, getBalancerPriceWithConnector(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);		
+            quotes[6] = Quote(SwapType.BALANCERWITHWETH, getBalancerPriceWithConnectorAnalytically(tokenIn, amountIn, tokenOut, WETH), dummyPools, dummyPoolFees);		
         }
 
         // Because this is a generalized contract, it is best to just loop,
@@ -240,9 +241,9 @@ contract OnChainPricingMainnet {
              //filter out disqualified pools to save gas on quoter swap query
              uint256 rate = _getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn);		
              if (rate > 0){
-                 uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);
-                 if (quote > quoteRate){
-                     quoteRate = quote;				
+                 //uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);// skip this "call and revert" gas-consuming method
+                 if (rate > quoteRate){
+                     quoteRate = rate;				
                  }
              }
 
@@ -281,46 +282,50 @@ contract OnChainPricingMainnet {
     /// @return the current price in V3 for it
     function _getUniV3Rate(address token0, address token1, uint24 fee, bool token0Price, uint256 amountIn) internal view returns (uint256) {
 	
-        // heuristic check0: ensure the pool [exist] and properly initiated
+        // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
         address pool = _getUniV3PoolAddress(token0, token1, fee);
         if (!pool.isContract() || IUniswapV3Pool(pool).liquidity() == 0) {
             return 0;
         }
 		
+        uint256 _t0Balance = IERC20(token0).balanceOf(pool);
+        uint256 _t1Balance = IERC20(token1).balanceOf(pool);
+		
         // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn]
-        if (IERC20(token0Price? token0 : token1).balanceOf(pool) <= amountIn){
+        if ((token0Price? _t0Balance : _t1Balance) <= amountIn){
             return 0;	
         }
-
+        
+        uint256 _t0Decimals = 10 ** IERC20Metadata(token0).decimals();
+        uint256 _t1Decimals = 10 ** IERC20Metadata(token1).decimals();
+		
         // heuristic check2: ensure the pool tokenOut reserve makes sense in terms of the [amountOutput based on slot0 price]
-        uint256 rate = _queryUniV3PriceWithSlot(token0, token1, pool, token0Price);
-        uint256 amountOutput = rate * amountIn * (10 ** IERC20Metadata(token0Price? token1 : token0).decimals()) / (10 ** IERC20Metadata(token0Price? token0 : token1).decimals()) / 1e18;
-        if (IERC20(token0Price? token1 : token0).balanceOf(pool) <= amountOutput){
+        uint256 rate = _queryUniV3PriceWithSlot(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals);
+        uint256 amountOutput = rate * amountIn * (token0Price? _t1Decimals : _t0Decimals) / (token0Price? _t0Decimals : _t1Decimals) / 1e18;
+        if ((token0Price? _t1Balance : _t0Balance) <= amountOutput){
             return 0;		
         }
 		
         // heuristic check3: ensure the pool [reserve comparison is consistent with the slot0 price comparison], i.e., asset in less amount should be more expensive in AMM pool
         bool token0MoreExpensive = _compareUniV3Tokens(token0Price, rate);
-        bool token0MoreReserved = _compareUniV3TokenReserves(token0, token1, pool);
+        bool token0MoreReserved = _compareUniV3TokenReserves(_t0Balance, _t1Balance, _t0Decimals, _t1Decimals);
         if (token0MoreExpensive == token0MoreReserved){
             return 0;		
         }
         
-        return rate;
+        return amountOutput;
     }
 	
     /// @dev query current price from V3 pool interface(slot0) with given pool & token0 & token1
     /// @dev and indicator if token0 pricing required (token1/token0 e.g., token0 -> token1)
     ///	@return the price of required token scaled with 1e18
-    function _queryUniV3PriceWithSlot(address token0, address token1, address pool, bool token0Price) internal view returns (uint256) {			
+    function _queryUniV3PriceWithSlot(address token0, address token1, address pool, bool token0Price, uint256 _t0Decimals, uint256 _t1Decimals) internal view returns (uint256) {			
         (uint256 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-        uint256 rate;
         if (token0Price) {
-            rate = (((10 ** IERC20Metadata(token0).decimals() * sqrtPriceX96 >> 96) * sqrtPriceX96) >> 96) * 1e18 / 10 ** IERC20Metadata(token1).decimals();
+            return (((_t0Decimals * sqrtPriceX96 >> 96) * sqrtPriceX96) >> 96) * 1e18 / _t1Decimals;
         } else {
-            rate = ((10 ** IERC20Metadata(token1).decimals() << 192) / sqrtPriceX96 / sqrtPriceX96) * 1e18 / 10 ** IERC20Metadata(token0).decimals();
+            return ((_t1Decimals << 192) / sqrtPriceX96 / sqrtPriceX96) * 1e18 / _t0Decimals;
         }
-        return rate;
     }
 	
     /// @dev check if token0 is more expensive than token1 given slot0 price & if token0 pricing required
@@ -329,10 +334,8 @@ contract OnChainPricingMainnet {
     }
 	
     /// @dev check if token0 reserve is bigger than token1 reserve
-    function _compareUniV3TokenReserves(address token0, address token1, address pool) internal view returns (bool) {
-        uint256 token0Num = IERC20(token0).balanceOf(pool) / (10 ** IERC20Metadata(token0).decimals());
-        uint256 token1Num = IERC20(token1).balanceOf(pool) / (10 ** IERC20Metadata(token1).decimals());
-        return token0Num > token1Num;
+    function _compareUniV3TokenReserves(uint256 _t0Balance, uint256 _t1Balance, uint256 _t0Decimals, uint256 _t1Decimals) internal view returns (bool) {
+        return (_t0Balance / _t0Decimals) > (_t1Balance / _t1Decimals);
     }
 	
     /// @dev query with the address of the token0 & token1 & the fee tier
@@ -366,6 +369,48 @@ contract OnChainPricingMainnet {
         return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
     }
 	
+    /// @dev Given the input/output token, returns the quote for input amount from Balancer V2 using its underlying math
+    /// @dev reference: https://hackmd.io/@shuklaayush/BkAtKbCY9
+    function getBalancerPriceAnalytically(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) { 
+        bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
+        if (poolId == BALANCERV2_NONEXIST_POOLID){
+            return 0;
+        }
+		
+        (address _pool,) = IBalancerV2Vault(BALANCERV2_VAULT).getPool(poolId);
+		
+        uint256 _inDecimals = 10 ** IERC20Metadata(tokenIn).decimals();
+        uint256 _outDecimals = 10 ** IERC20Metadata(tokenOut).decimals(); 
+        uint256 _pIn2Out;
+        
+        {
+            uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
+            (address[] memory tokens, uint256[] memory balances, ) = IBalancerV2Vault(BALANCERV2_VAULT).getPoolTokens(poolId);
+            require(_weights.length == tokens.length, '!lenBAL');
+			
+            uint256 _inTokenIdx = _findTokenInBalancePool(tokenIn, tokens);
+            require(_inTokenIdx < tokens.length, '!inBAL');
+            uint256 _outTokenIdx = _findTokenInBalancePool(tokenOut, tokens);
+            require(_outTokenIdx < tokens.length, '!outBAL');
+		
+            /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
+            _pIn2Out = (_weights[_inTokenIdx] * balances[_outTokenIdx] / _outDecimals) / (_weights[_outTokenIdx] * balances[_inTokenIdx] / _inDecimals);
+        }
+
+        return amountIn * _pIn2Out * _outDecimals / _inDecimals;
+    }
+	
+    function _findTokenInBalancePool(address _token, address[] memory _tokens) internal view returns (uint256){	    
+        uint256 _len = _tokens.length;
+        for (uint256 i = 0; i < _len; ){
+            if (_tokens[i] == _token){
+                return i;
+            }
+            unchecked{ ++i; }
+        } 
+        return type(uint256).max;
+    }
+	
     /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2
     function getBalancerPriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) { 
         bytes32 firstPoolId = getBalancerV2Pool(tokenIn, connectorToken);
@@ -392,6 +437,15 @@ contract OnChainPricingMainnet {
 
         // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
         return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
+    }
+	
+    /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2 using its underlying math
+    function getBalancerPriceWithConnectorAnalytically(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public view returns (uint256) { 
+        uint256 _in2ConnectorAmt = getBalancerPriceAnalytically(tokenIn, amountIn, connectorToken);
+        if (_in2ConnectorAmt <= 0){
+            return 0;
+        }
+        return getBalancerPriceAnalytically(connectorToken, _in2ConnectorAmt, tokenOut);    
     }
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 

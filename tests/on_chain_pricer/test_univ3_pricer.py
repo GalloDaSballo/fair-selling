@@ -22,11 +22,12 @@ def test_get_univ3_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
   ## 1e8
   sell_amount = 100 * 100000000
   
-  quote = pricer.getUniV3Price(wbtc.address, sell_amount, usdc.address).return_value
+  ## minimum quote for WBTC in USDC(1e6) ## Rip ETH price
+  p = 100 * 15000 * 1000000  
   quoteWithConnector = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
 
   ## min price 
-  assert quoteWithConnector > quote  
+  assert quoteWithConnector >= p  
 
 """
     getUniV3PriceWithConnector quote for stablecoin A swapped to stablecoin B with connector token C: A -> C -> B
@@ -35,8 +36,9 @@ def test_get_univ3_price_with_connector_stablecoin(oneE18, dai, usdc, weth, pric
   ## 1e18
   sell_amount = 10000 * oneE18
 
-  quote = pricer.getUniV3Price(dai.address, sell_amount, usdc.address).return_value
+  ## minimum quote for DAI in USDC(1e6) ## Rip ETH price
+  p = 10000 * 0.99 * 1000000  
   quoteWithConnector = pricer.getUniV3PriceWithConnector(dai.address, sell_amount, usdc.address, weth.address).return_value
 
   ## min price 
-  assert quoteWithConnector < quote  
+  assert quoteWithConnector >= p  
