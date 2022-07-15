@@ -15,6 +15,7 @@ import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/balancer/IBalancerV2WeightedPool.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
+import "../interfaces/uniswap/IV3Simulator.sol";
 
 enum SwapType { 
     CURVE, //0
@@ -106,6 +107,27 @@ contract OnChainPricingMainnet {
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
     uint256 public constant CURVE_FEE_SCALE = 100000;
+	
+    /// @dev helper library to simulate Uniswap V3 swap
+    address public uniV3Simulator;
+    /// @dev slippage allowance bps in Uniswap V3 simulation, max 10000
+    uint256 public uniV3SimSlippageBps = 100; // 1% slippage allowed in simulation
+	
+    /// === TEST-ONLY ===
+    constructor(address _uniV3Simulator){
+        uniV3Simulator = _uniV3Simulator;
+    }
+	
+    function setUniV3Simulator(address _uniV3Simulator) external {
+        require(_uniV3Simulator != address(0));//TODO permission
+        uniV3Simulator = _uniV3Simulator;
+    }
+	
+    function setUniV3SimuSlippageBps(uint256 _slippageBps) external {
+        require(_slippageBps < 10000);//TODO permission
+        uniV3SimSlippageBps = _slippageBps;
+    }
+    /// === END TEST-ONLY ===
 
     struct Quote {
         SwapType name;
@@ -230,6 +252,32 @@ contract OnChainPricingMainnet {
 
     /// === UNIV3 === ///
 	
+    /// @dev simulate Uniswap V3 swap using its tick-based math for given parameters
+    /// @dev check library UniV3SwapTick for more
+    function simulateUniV3Swap(address _simulator, address tokenIn, uint256 amountIn, address tokenOut, uint24 _fee, uint256 _slippageAllowedBps) public view returns (uint256){
+        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
+        address _pool = _getUniV3PoolAddress(token0, token1, _fee);
+        
+        {
+            // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
+            if (!_pool.isContract() || IUniswapV3Pool(_pool).liquidity() == 0) {
+                return 0;
+            }
+        }
+		
+        {
+            uint256 _t0Balance = IERC20(token0).balanceOf(_pool);
+            uint256 _t1Balance = IERC20(token1).balanceOf(_pool);
+		
+            // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn]
+            if ((token0Price? _t0Balance : _t1Balance) <= amountIn){
+                return 0;	
+            }
+        }
+		
+        return IUniswapV3Simulator(_simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn, _slippageAllowedBps);
+    }	
+	
     /// @dev Given the address of the input token & amount & the output token
     /// @return the quote for it
     function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) {
@@ -239,11 +287,11 @@ contract OnChainPricingMainnet {
         uint256 feeTypes = univ3_fees.length;
         for (uint256 i = 0; i < feeTypes; ){	
              //filter out disqualified pools to save gas on quoter swap query
-             uint256 rate = _getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn);		
-             if (rate > 0){
-                 //uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);// skip this "call and revert" gas-consuming method
-                 if (rate > quoteRate){
-                     quoteRate = rate;				
+             {
+                 uint256 rate = simulateUniV3Swap(uniV3Simulator, tokenIn, amountIn, tokenOut, univ3_fees[i], uniV3SimSlippageBps);//_getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn)
+                 if (rate > 0){
+                     //uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);// skip this "call and revert" gas-consuming method
+                     quoteRate = rate > quoteRate? rate : quoteRate;
                  }
              }
 

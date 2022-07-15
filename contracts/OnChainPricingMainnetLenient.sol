@@ -32,6 +32,9 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
 
     uint256 public slippage = 200; // 2% Initially
 
+    constructor(address _uniV3Simulator) OnChainPricingMainnet(_uniV3Simulator){
+        
+    }
 
     function setSlippage(uint256 newSlippage) external {
         require(msg.sender == TECH_OPS, "Only TechOps");

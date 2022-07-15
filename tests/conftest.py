@@ -32,18 +32,21 @@ CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
 WBTC_WHALE = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
 
 ## Contracts ##
+  
 @pytest.fixture
 def swapexecutor():
   return OnChainSwapMainnet.deploy({"from": a[0]})
   
 @pytest.fixture
 def pricer():
-  return OnChainPricingMainnet.deploy({"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
+  return OnChainPricingMainnet.deploy(univ3simulator.address, {"from": a[0]})
 
 @pytest.fixture
 def lenient_contract():
   ## NOTE: We have 5% slippage on this one
-  c =  OnChainPricingMainnetLenient.deploy({"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
+  c =  OnChainPricingMainnetLenient.deploy(univ3simulator.address, {"from": a[0]})
   c.setSlippage(499, {"from": accounts.at(c.TECH_OPS(), force=True)})
 
   return c
