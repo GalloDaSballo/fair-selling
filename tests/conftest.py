@@ -30,7 +30,7 @@ WETH_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
 CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
 WBTC_WHALE = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
 
-## Contracts ##
+## Contracts ##  
 @pytest.fixture
 def swapexecutor():
   return OnChainSwapMainnet.deploy({"from": a[0]})
@@ -128,8 +128,17 @@ def aura_whale():
   return accounts.at(AURA_WHALE, force=True)
 
 @pytest.fixture
+def wbtc_whale():
+  return accounts.at(WBTC_WHALE, force=True)
+
+@pytest.fixture
 def manager(seller):
   return accounts.at(seller.manager(), force=True)
+  
+@pytest.fixture
+def cowprocessor(manager, pricer):
+  CowSwapValidation.deploy({"from": manager})
+  return CowSwapProcessor.deploy(pricer, {"from": manager})
 
 @pytest.fixture
 def strategy(processor):
