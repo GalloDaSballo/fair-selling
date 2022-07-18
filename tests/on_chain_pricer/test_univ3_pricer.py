@@ -11,7 +11,7 @@ def test_get_univ3_price(oneE18, weth, usdc, pricer):
     
   ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
   p = 1 * 900 * 1000000  
-  quote = pricer.getUniV3Price(weth.address, sell_amount, usdc.address).return_value
+  quote = pricer.getUniV3Price(weth.address, sell_amount, usdc.address)
   
   assert quote >= p    
 
@@ -22,9 +22,9 @@ def test_get_univ3_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
   ## 1e8
   sell_amount = 100 * 100000000
   
-  ## minimum quote for WBTC in USDC(1e6) ## Rip ETH price
+  ## minimum quote for WBTC in USDC(1e6)
   p = 100 * 15000 * 1000000  
-  quoteWithConnector = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
+  quoteWithConnector = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address)
 
   ## min price 
   assert quoteWithConnector >= p  
@@ -36,9 +36,9 @@ def test_get_univ3_price_with_connector_stablecoin(oneE18, dai, usdc, weth, pric
   ## 1e18
   sell_amount = 10000 * oneE18
 
-  ## minimum quote for DAI in USDC(1e6) ## Rip ETH price
+  ## minimum quote for DAI in USDC(1e6)
   p = 10000 * 0.99 * 1000000  
-  quoteWithConnector = pricer.getUniV3PriceWithConnector(dai.address, sell_amount, usdc.address, weth.address).return_value
+  quoteWithConnector = pricer.getUniV3PriceWithConnector(dai.address, sell_amount, usdc.address, weth.address)
 
   ## min price 
-  assert quoteWithConnector >= p  
+  assert quoteWithConnector >= p    

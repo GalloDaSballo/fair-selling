@@ -5,6 +5,15 @@ pragma abicoder v2;
 import "./FullMath.sol";
 import "./SqrtPriceMath.sol";
 
+struct SwapExactInParam{
+    uint256 _amountIn;
+    uint24 _fee;
+    uint160 _currentPriceX96;
+    uint160 _targetPriceX96;
+    uint128 _liquidity;
+    bool _zeroForOne;
+}
+
 // https://github.com/Uniswap/v3-core/blob/main/contracts/libraries/SwapMath.sol
 library SwapMath {
     /// @notice Computes the result of swapping some amount in, or amount out, given the parameters of the swap
@@ -39,18 +48,10 @@ library SwapMath {
 
         {
           if (exactIn) {
-            uint256 amountRemainingLessFee = FullMath.mulDiv(uint256(amountRemaining), 1e6 - feePips, 1e6);
-            amountIn = zeroForOne
-                ? SqrtPriceMath.getAmount0Delta(sqrtRatioTargetX96, sqrtRatioCurrentX96, liquidity, true)
-                : SqrtPriceMath.getAmount1Delta(sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, true);
-            if (amountRemainingLessFee >= amountIn) sqrtRatioNextX96 = sqrtRatioTargetX96;
-            else
-                sqrtRatioNextX96 = SqrtPriceMath.getNextSqrtPriceFromInput(
-                    sqrtRatioCurrentX96,
-                    liquidity,
-                    amountRemainingLessFee,
-                    zeroForOne
-                );
+            SwapExactInParam memory _exactInParams = SwapExactInParam(uint256(amountRemaining), feePips, sqrtRatioCurrentX96, sqrtRatioTargetX96, liquidity, zeroForOne);
+            (uint256 _amtIn, uint160 _nextPrice) = _getExactInNextPrice(_exactInParams);
+            amountIn = _amtIn;
+            sqrtRatioNextX96 = _nextPrice;
           } else {
             amountOut = zeroForOne
                 ? SqrtPriceMath.getAmount1Delta(sqrtRatioTargetX96, sqrtRatioCurrentX96, liquidity, false)
@@ -98,5 +99,15 @@ library SwapMath {
         } else {
             feeAmount = FullMath.mulDivRoundingUp(amountIn, feePips, 1e6 - feePips);
         }
+    }
+	
+    function _getExactInNextPrice(SwapExactInParam memory _exactInParams) internal pure returns (uint256, uint160){
+        uint160 sqrtRatioNextX96;
+        uint256 amountRemainingLessFee = FullMath.mulDiv(_exactInParams._amountIn, 1e6 - (_exactInParams._fee), 1e6);
+        uint256 amountIn = _exactInParams._zeroForOne? SqrtPriceMath.getAmount0Delta(_exactInParams._targetPriceX96, _exactInParams._currentPriceX96, _exactInParams._liquidity, true) : 
+                                                       SqrtPriceMath.getAmount1Delta(_exactInParams._currentPriceX96, _exactInParams._targetPriceX96, _exactInParams._liquidity, true);
+        if (amountRemainingLessFee >= _exactInParams._amountIn) sqrtRatioNextX96 = _exactInParams._targetPriceX96;
+        else sqrtRatioNextX96 = SqrtPriceMath.getNextSqrtPriceFromInput(_exactInParams._currentPriceX96, _exactInParams._liquidity, amountRemainingLessFee, _exactInParams._zeroForOne);
+        return (amountIn, sqrtRatioNextX96);
     }
 }

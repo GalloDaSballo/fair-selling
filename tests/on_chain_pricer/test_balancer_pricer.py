@@ -45,7 +45,7 @@ def test_get_balancer_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
 """
     getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
 """
-def test_get_balancer_price2(oneE18, cvx, weth, pricer):  
+def test_get_balancer_price_nonexistence(oneE18, cvx, weth, pricer):  
   ## 1e18
   sell_amount = 100 * oneE18
     
@@ -81,7 +81,7 @@ def test_get_balancer_price_with_connector_analytical(oneE18, wbtc, usdc, weth, 
 """
     getBalancerPriceAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B analytically
 """
-def test_get_balancer_price_ohm__analytical(oneE18, ohm, dai, pricer):  
+def test_get_balancer_price_ohm_analytical(oneE18, ohm, dai, pricer):  
   ## 1e8
   sell_count = 1000
   sell_amount = sell_count * oneE18
@@ -89,5 +89,20 @@ def test_get_balancer_price_ohm__analytical(oneE18, ohm, dai, pricer):
   ## minimum quote for OHM in DAI(1e6)
   p = sell_count * 10 * oneE18  
   quote = pricer.getBalancerPriceAnalytically(ohm.address, sell_amount, dai.address)
-  assert quote >= p    
+  assert quote >= p     
+  
+"""
+    getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
+"""
+def test_get_balancer_price_aurabal_analytical(oneE18, aurabal, weth, pricer):  
+  ## 1e18
+  sell_count = 1000
+  sell_amount = sell_count * oneE18
+  
+  ## minimum quote for AURABAL in WETH(1e18)
+  p = sell_count * 0.006 * oneE18  
+    
+  ## there is a proper pool in Balancer for AURABAL in WETH
+  quote = pricer.getBalancerPriceAnalytically(aurabal.address, sell_amount, weth.address)
+  assert quote >= p  
   

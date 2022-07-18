@@ -60,7 +60,7 @@ contract OnChainPricingMainnet {
     address public constant UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    uint24[3] univ3_fees = [uint24(100), 500, 3000];//, 10000]; //skip last fee for exotic tokens
+    uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000]; 
 	
     // BalancerV2 Vault
     address public constant BALANCERV2_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
@@ -252,58 +252,95 @@ contract OnChainPricingMainnet {
 
     /// === UNIV3 === ///
 	
-    /// @dev simulate Uniswap V3 swap using its tick-based math for given parameters
-    /// @dev check library UniV3SwapTick for more
-    function simulateUniV3Swap(address _simulator, address tokenIn, uint256 amountIn, address tokenOut, uint24 _fee, uint256 _slippageAllowedBps) public view returns (uint256){
+    /// @dev explore Uniswap V3 pools to check if there is a chance to resolve the swap with in-range liquidity (i.e., without crossing ticks)
+    /// @dev check helper UniV3SwapSimulator for more
+    /// @return maximum output (with current in-range liquidity & spot price) and according pool fee
+    function sortUniV3Pools(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256, uint24){
+        uint256 feeTypes = univ3_fees.length;		
+        uint256 _maxInRangeQuote;
+        uint24 _maxInRangeFee;
+		
+        {
+          for (uint256 i = 0; i < feeTypes;){
+             uint24 _fee = univ3_fees[i];
+             bool _crossTick;
+             uint256 _outAmt;
+             {
+                // in-range swap check: find out whether the swap within current liquidity would move the price across next tick
+                (bool _outOfInRange, uint256 _outputAmount) = _checkUniV3InRangeLiquidity(tokenIn, tokenOut, amountIn, _fee, uniV3SimSlippageBps);
+                _crossTick = _outOfInRange;
+                _outAmt = _outputAmount;
+             }
+             {
+                // unfortunately we need to do a full simulation to cross ticks
+                if (_crossTick){
+                    _outAmt = simulateUniV3Swap(tokenIn, amountIn, tokenOut, _fee, uniV3SimSlippageBps);
+                } 
+             }
+             {			 
+                if (_outAmt > _maxInRangeQuote){
+                    _maxInRangeQuote = _outAmt;
+                    _maxInRangeFee = _fee;
+                }
+             }
+             unchecked { ++i; }	
+          }        
+        }
+		
+        return (_maxInRangeQuote, _maxInRangeFee);
+    }	
+	
+    /// @dev internal function to avoid stack too deap for Uniswap V3 pool in-range liquidity check
+    function _checkUniV3InRangeLiquidity(address tokenIn, address tokenOut, uint256 amountIn, uint24 _fee, uint256 _uniV3SimSlippageBps) internal view returns (bool, uint256){
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
-        address _pool = _getUniV3PoolAddress(token0, token1, _fee);
-        
+        {    
+             address _pool = _getUniV3PoolAddress(token0, token1, _fee);
+             if (!_pool.isContract() || IUniswapV3Pool(_pool).liquidity() <= 0) {
+                 return (false, 0);
+             }
+             UniV3SortPoolQuery memory _sortQuery = UniV3SortPoolQuery(_pool, token0, token1, _fee, amountIn, token0Price, _uniV3SimSlippageBps);
+             return IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery);
+        }
+    }
+	
+    /// @dev internal function for a basic sanity check Uniswap V3 pool existence and balances
+    /// @return true if basic check pass otherwise false
+    function _checkUniV3PoolExistenceAndBalances(address _pool, uint128 _liq, address _token0, address _token1, bool token0Price, uint256 amountIn) internal view returns (bool, uint256, uint256) {
+	    
         {
-            // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
-            if (!_pool.isContract() || IUniswapV3Pool(_pool).liquidity() == 0) {
-                return 0;
-            }
+             // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
+             if (!_pool.isContract() || _liq == 0) {
+                 return (false, 0, 0);
+             }
         }
 		
         {
-            uint256 _t0Balance = IERC20(token0).balanceOf(_pool);
-            uint256 _t1Balance = IERC20(token1).balanceOf(_pool);
+             uint256 _t0Balance = IERC20(_token0).balanceOf(_pool);
+             uint256 _t1Balance = IERC20(_token1).balanceOf(_pool);
 		
-            // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn]
-            if ((token0Price? _t0Balance : _t1Balance) <= amountIn){
-                return 0;	
-            }
-        }
-		
-        return IUniswapV3Simulator(_simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn, _slippageAllowedBps);
+             // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn], i.e., the pool is liquid compared to swap amount 
+             return ((token0Price? _t0Balance : _t1Balance) > amountIn, _t0Balance, _t1Balance);
+        }		
+    }
+	
+    /// @dev simulate Uniswap V3 swap using its tick-based math for given parameters
+    /// @dev check helper UniV3SwapSimulator for more
+    function simulateUniV3Swap(address tokenIn, uint256 amountIn, address tokenOut, uint24 _fee, uint256 _slippageAllowedBps) public view returns (uint256){
+        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
+        address _pool = _getUniV3PoolAddress(token0, token1, _fee);		
+        return IUniswapV3Simulator(uniV3Simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn, _slippageAllowedBps);
     }	
 	
     /// @dev Given the address of the input token & amount & the output token
     /// @return the quote for it
-    function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) {
-        uint256 quoteRate;
-		
-        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
-        uint256 feeTypes = univ3_fees.length;
-        for (uint256 i = 0; i < feeTypes; ){	
-             //filter out disqualified pools to save gas on quoter swap query
-             {
-                 uint256 rate = simulateUniV3Swap(uniV3Simulator, tokenIn, amountIn, tokenOut, univ3_fees[i], uniV3SimSlippageBps);//_getUniV3Rate(token0, token1, univ3_fees[i], token0Price, amountIn)
-                 if (rate > 0){
-                     //uint256 quote = _getUniV3QuoterQuery(tokenIn, tokenOut, univ3_fees[i], amountIn);// skip this "call and revert" gas-consuming method
-                     quoteRate = rate > quoteRate? rate : quoteRate;
-                 }
-             }
-
-             unchecked { ++i; }
-        }
-		
-        return quoteRate;
+    function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) {		
+        (uint256 _maxInRangeQuote, uint24 _maxPoolFee) = sortUniV3Pools(tokenIn, amountIn, tokenOut);		
+        return _maxInRangeQuote;
     }
 	
     /// @dev Given the address of the input token & amount & the output token & connector token in between (input token ---> connector token ---> output token)
     /// @return the quote for it
-    function getUniV3PriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) {
+    function getUniV3PriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public view returns (uint256) {
         uint256 connectorAmount = getUniV3Price(tokenIn, amountIn, connectorToken);	
         if (connectorAmount > 0){	
             return getUniV3Price(connectorToken, connectorAmount, tokenOut);
@@ -313,6 +350,7 @@ contract OnChainPricingMainnet {
     }
 	
     /// @dev query swap result from Uniswap V3 quoter for given tokenIn -> tokenOut with amountIn & fee
+    /// @dev this "call and revert" method consumes tons of gas
     function _getUniV3QuoterQuery(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn) internal returns (uint256){
         uint256 quote = IV3Quoter(UNIV3_QUOTER).quoteExactInputSingle(tokenIn, tokenOut, fee, amountIn, 0);
         return quote;
@@ -328,33 +366,26 @@ contract OnChainPricingMainnet {
     /// @dev with trade amount & indicator if token0 pricing required (token1/token0 e.g., token0 -> token1)
     /// @dev note there are some heuristic checks around the price like pool reserve should satisfy the swap amount
     /// @return the current price in V3 for it
-    function _getUniV3Rate(address token0, address token1, uint24 fee, bool token0Price, uint256 amountIn) internal view returns (uint256) {
+    function _getUniV3RateHeuristic(address token0, address token1, uint24 fee, bool token0Price, uint256 amountIn) internal view returns (uint256) {
 	
         // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
-        address pool = _getUniV3PoolAddress(token0, token1, fee);
-        if (!pool.isContract() || IUniswapV3Pool(pool).liquidity() == 0) {
-            return 0;
-        }
-		
-        uint256 _t0Balance = IERC20(token0).balanceOf(pool);
-        uint256 _t1Balance = IERC20(token1).balanceOf(pool);
-		
-        // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn]
-        if ((token0Price? _t0Balance : _t1Balance) <= amountIn){
-            return 0;	
-        }
+        address pool = _getUniV3PoolAddress(token0, token1, fee);        
+			 
+        //filter out disqualified pools to save gas on quoter swap query
+        (bool _basicCheck, uint256 _t0Balance, uint256 _t1Balance) = _checkUniV3PoolExistenceAndBalances(pool, IUniswapV3Pool(pool).liquidity(), token0, token1, token0Price, amountIn);		
+        if (!_basicCheck) return 0;	 
         
         uint256 _t0Decimals = 10 ** IERC20Metadata(token0).decimals();
         uint256 _t1Decimals = 10 ** IERC20Metadata(token1).decimals();
 		
-        // heuristic check2: ensure the pool tokenOut reserve makes sense in terms of the [amountOutput based on slot0 price]
-        uint256 rate = _queryUniV3PriceWithSlot(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals);
-        uint256 amountOutput = rate * amountIn * (token0Price? _t1Decimals : _t0Decimals) / (token0Price? _t0Decimals : _t1Decimals) / 1e18;
+        // Heuristically reserve with spot price check: ensure the pool tokenOut reserve makes sense in terms of thespot price [amountOutput based on slot0 price]
+        (uint256 rate, uint256 amountOutput) = _getOutputWithSlot0Price(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals, amountIn);
         if ((token0Price? _t1Balance : _t0Balance) <= amountOutput){
             return 0;		
         }
 		
-        // heuristic check3: ensure the pool [reserve comparison is consistent with the slot0 price comparison], i.e., asset in less amount should be more expensive in AMM pool
+        // Heuristically reserves comparison check: ensure the pool [reserve comparison is consistent with the slot0 price comparison], 
+        // i.e., asset in less amount should be more expensive in AMM pool
         bool token0MoreExpensive = _compareUniV3Tokens(token0Price, rate);
         bool token0MoreReserved = _compareUniV3TokenReserves(_t0Balance, _t1Balance, _t0Decimals, _t1Decimals);
         if (token0MoreExpensive == token0MoreReserved){
@@ -362,6 +393,13 @@ contract OnChainPricingMainnet {
         }
         
         return amountOutput;
+    }
+	
+    /// @dev calculate output amount according to Uniswap V3 spot price (slot0)
+    function _getOutputWithSlot0Price(address token0, address token1, address pool, bool token0Price, uint256 _t0Decimals, uint256 _t1Decimals, uint256 amountIn) internal view returns (uint256, uint256) {
+        uint256 rate = _queryUniV3PriceWithSlot(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals);
+        uint256 amountOutput = rate * amountIn * (token0Price? _t1Decimals : _t0Decimals) / (token0Price? _t0Decimals : _t1Decimals) / 1e18;
+        return (rate, amountOutput);
     }
 	
     /// @dev query current price from V3 pool interface(slot0) with given pool & token0 & token1
@@ -442,10 +480,10 @@ contract OnChainPricingMainnet {
             require(_outTokenIdx < tokens.length, '!outBAL');
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
-            _pIn2Out = (_weights[_inTokenIdx] * balances[_outTokenIdx] / _outDecimals) / (_weights[_outTokenIdx] * balances[_inTokenIdx] / _inDecimals);
+            _pIn2Out = 1e18 * (_weights[_inTokenIdx] * balances[_outTokenIdx] / _outDecimals) / (_weights[_outTokenIdx] * balances[_inTokenIdx] / _inDecimals);
         }
 
-        return amountIn * _pIn2Out * _outDecimals / _inDecimals;
+        return amountIn * _pIn2Out * _outDecimals / _inDecimals / 1e18;
     }
 	
     function _findTokenInBalancePool(address _token, address[] memory _tokens) internal view returns (uint256){	    
