@@ -463,10 +463,7 @@ contract OnChainPricingMainnet {
             return 0;
         }
 		
-        (address _pool,) = IBalancerV2Vault(BALANCERV2_VAULT).getPool(poolId);
-		
-        uint256 _inDecimals = 10 ** IERC20Metadata(tokenIn).decimals();
-        uint256 _outDecimals = 10 ** IERC20Metadata(tokenOut).decimals(); 
+        address _pool = getAddressFromBytes32(poolId);			
         uint256 _pIn2Out;
         
         {
@@ -480,13 +477,13 @@ contract OnChainPricingMainnet {
             require(_outTokenIdx < tokens.length, '!outBAL');
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
-            _pIn2Out = 1e18 * (_weights[_inTokenIdx] * balances[_outTokenIdx] / _outDecimals) / (_weights[_outTokenIdx] * balances[_inTokenIdx] / _inDecimals);
+            _pIn2Out = 1e18 * (_weights[_inTokenIdx] * balances[_outTokenIdx]) / (_weights[_outTokenIdx] * balances[_inTokenIdx]); // _outDecimals / _inDecimals
         }
 
-        return amountIn * _pIn2Out * _outDecimals / _inDecimals / 1e18;
+        return amountIn * _pIn2Out / 1e18;// _outDecimals / _inDecimals
     }
 	
-    function _findTokenInBalancePool(address _token, address[] memory _tokens) internal view returns (uint256){	    
+    function _findTokenInBalancePool(address _token, address[] memory _tokens) internal pure returns (uint256){	    
         uint256 _len = _tokens.length;
         for (uint256 i = 0; i < _len; ){
             if (_tokens[i] == _token){
@@ -605,5 +602,11 @@ contract OnChainPricingMainnet {
     // TODO: Figure out if abi.encode is better
     function convertToBytes32(address _input) public pure returns (bytes32){
         return bytes32(uint256(uint160(_input)) << 96);
+    }
+	
+    /// @dev Take for example the _input "0x111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEEFFFFCCCC"
+    /// @return the result of "0x111122223333444455556666777788889999aAaa"
+    function getAddressFromBytes32(bytes32 _input) public pure returns (address){
+        return address(uint160(bytes20(_input)));
     }
 }
