@@ -301,7 +301,7 @@ contract OnChainPricingMainnet {
              uint256 _outAmt;
              {
                 // in-range swap check: find out whether the swap within current liquidity would move the price across next tick
-                (bool _outOfInRange, uint256 _outputAmount) = _checkUniV3InRangeLiquidity(tokenIn, tokenOut, amountIn, _fee, uniV3SimSlippageBps);
+                (bool _outOfInRange, uint256 _outputAmount) = checkUniV3InRangeLiquidity(tokenIn, tokenOut, amountIn, _fee, uniV3SimSlippageBps);
                 _crossTick = _outOfInRange;
                 _outAmt = _outputAmount;
              }
@@ -325,7 +325,7 @@ contract OnChainPricingMainnet {
     }	
 	
     /// @dev internal function to avoid stack too deap for Uniswap V3 pool in-range liquidity check
-    function _checkUniV3InRangeLiquidity(address tokenIn, address tokenOut, uint256 amountIn, uint24 _fee, uint256 _uniV3SimSlippageBps) internal view returns (bool, uint256){
+    function checkUniV3InRangeLiquidity(address tokenIn, address tokenOut, uint256 amountIn, uint24 _fee, uint256 _uniV3SimSlippageBps) public view returns (bool, uint256){
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         {    
              address _pool = _getUniV3PoolAddress(token0, token1, _fee);
