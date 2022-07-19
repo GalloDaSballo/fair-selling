@@ -50,8 +50,10 @@ contract OnChainPricingMainnet {
     /// == Uni V2 Like Routers || These revert on non-existent pair == //
     // UniV2
     address public constant UNIV2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D; // Spookyswap
+    bytes public constant UNIV2_POOL_INITCODE = hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f';
     // Sushi
     address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
+    bytes public constant SUSHI_POOL_INITCODE = hex'e18a34eb0e04b04f7a0ac29a6e80748dca96319b42c54d679cb821dca90c6303';
 
     // Curve / Doesn't revert on failure
     address public constant CURVE_ROUTER = 0x8e764bE4288B842791989DB5b8ec067279829809; // Curve quote and swaps
@@ -232,24 +234,56 @@ contract OnChainPricingMainnet {
 
     /// @dev Given the address of the UniV2Like Router, the input amount, and the path, returns the quote for it
     function getUniPrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {
-        address[] memory path = new address[](2);
-        path[0] = address(tokenIn);
-        path[1] = address(tokenOut);
+	
+        // check pool existence first before quote against it
+        bytes memory _initCode = (router == UNIV2_ROUTER)? UNIV2_POOL_INITCODE : SUSHI_POOL_INITCODE;
+        (address _pool, address _token0, address _token1) = pairForUniV2(IUniswapRouterV2(router).factory(), tokenIn, tokenOut, _initCode);
+        if (!_pool.isContract()){
+            return 0;
+        }
+		
+        bool _zeroForOne = (_token0 == tokenIn);
+        // Use LP token Total Supply as a quick-easy substitute for liquidity
+        (bool _basicCheck, uint256 _t0Balance, uint256 _t1Balance) = _checkPoolLiquidityAndBalances(_pool, IERC20(_pool).totalSupply(), _token0, _token1, _zeroForOne, amountIn);
+        return _basicCheck? getUniV2AmountOutAnalytically(amountIn, (_zeroForOne? _t0Balance : _t1Balance), (_zeroForOne? _t1Balance : _t0Balance)) : 0;
+		
+        //address[] memory path = new address[](2);
+        //path[0] = address(tokenIn);
+        //path[1] = address(tokenOut);
 
-        uint256 quote; //0
+        //uint256 quote; //0
 
 
         // TODO: Consider doing check before revert to avoid paying extra gas
         // Specifically, test gas if we get revert vs if we check to avoid it
-        try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
-            quote = amounts[amounts.length - 1]; // Last one is the outToken
-        } catch (bytes memory) {
+        //try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
+        //    quote = amounts[amounts.length - 1]; // Last one is the outToken
+        //} catch (bytes memory) {
             // We ignore as it means it's zero
-        }
+        //}
 
-        return quote;
+        //return quote;
     }
-
+	
+    /// @dev reference https://etherscan.io/address/0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F#code#L122
+    function getUniV2AmountOutAnalytically(uint256 amountIn, uint256 reserveIn, uint256 reserveOut) public pure returns (uint256 amountOut) {
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * 1000 + amountInWithFee;
+        amountOut = numerator / denominator;
+    }
+	
+    function pairForUniV2(address factory, address tokenA, address tokenB, bytes memory _initCode) public view returns (address, address, address) {
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);		
+        address pair = getAddressFromBytes32Lsb(keccak256(abi.encodePacked(
+                hex'ff',
+                factory,
+                keccak256(abi.encodePacked(token0, token1)),
+                _initCode // init code hash
+        )));
+        return (pair, token0, token1);
+    }
+	
     /// === UNIV3 === ///
 	
     /// @dev explore Uniswap V3 pools to check if there is a chance to resolve the swap with in-range liquidity (i.e., without crossing ticks)
@@ -303,13 +337,13 @@ contract OnChainPricingMainnet {
         }
     }
 	
-    /// @dev internal function for a basic sanity check Uniswap V3 pool existence and balances
+    /// @dev internal function for a basic sanity check pool existence and balances
     /// @return true if basic check pass otherwise false
-    function _checkUniV3PoolExistenceAndBalances(address _pool, uint128 _liq, address _token0, address _token1, bool token0Price, uint256 amountIn) internal view returns (bool, uint256, uint256) {
+    function _checkPoolLiquidityAndBalances(address _pool, uint256 _liq, address _token0, address _token1, bool token0Price, uint256 amountIn) internal view returns (bool, uint256, uint256) {
 	    
         {
              // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
-             if (!_pool.isContract() || _liq == 0) {
+             if (_liq == 0) {
                  return (false, 0, 0);
              }
         }
@@ -319,6 +353,7 @@ contract OnChainPricingMainnet {
              uint256 _t1Balance = IERC20(_token1).balanceOf(_pool);
 		
              // heuristic check1: ensure the pool tokenIn reserve makes sense in terms of [amountIn], i.e., the pool is liquid compared to swap amount 
+             // _t0Balance and _t1Balance will be both above zero if there is liquidity
              return ((token0Price? _t0Balance : _t1Balance) > amountIn, _t0Balance, _t1Balance);
         }		
     }
@@ -369,10 +404,13 @@ contract OnChainPricingMainnet {
     function _getUniV3RateHeuristic(address token0, address token1, uint24 fee, bool token0Price, uint256 amountIn) internal view returns (uint256) {
 	
         // heuristic check0: ensure the pool [exist] and properly initiated with valid in-range liquidity
-        address pool = _getUniV3PoolAddress(token0, token1, fee);        
+        address pool = _getUniV3PoolAddress(token0, token1, fee);  
+        if (!pool.isContract()){
+            return 0;
+        }		
 			 
         //filter out disqualified pools to save gas on quoter swap query
-        (bool _basicCheck, uint256 _t0Balance, uint256 _t1Balance) = _checkUniV3PoolExistenceAndBalances(pool, IUniswapV3Pool(pool).liquidity(), token0, token1, token0Price, amountIn);		
+        (bool _basicCheck, uint256 _t0Balance, uint256 _t1Balance) = _checkPoolLiquidityAndBalances(pool, uint256(IUniswapV3Pool(pool).liquidity()), token0, token1, token0Price, amountIn);		
         if (!_basicCheck) return 0;	 
         
         uint256 _t0Decimals = 10 ** IERC20Metadata(token0).decimals();
@@ -463,7 +501,7 @@ contract OnChainPricingMainnet {
             return 0;
         }
 		
-        address _pool = getAddressFromBytes32(poolId);			
+        address _pool = getAddressFromBytes32Msb(poolId);			
         uint256 _pIn2Out;
         
         {
@@ -606,7 +644,13 @@ contract OnChainPricingMainnet {
 	
     /// @dev Take for example the _input "0x111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEEFFFFCCCC"
     /// @return the result of "0x111122223333444455556666777788889999aAaa"
-    function getAddressFromBytes32(bytes32 _input) public pure returns (address){
+    function getAddressFromBytes32Msb(bytes32 _input) public pure returns (address){
         return address(uint160(bytes20(_input)));
+    }
+	
+    /// @dev Take for example the _input "0x111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEEFFFFCCCC"
+    /// @return the result of "0x777788889999AaAAbBbbCcccddDdeeeEfFFfCcCc"
+    function getAddressFromBytes32Lsb(bytes32 _input) public pure returns (address){
+        return address(uint160(uint256(_input)));
     }
 }
