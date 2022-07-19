@@ -44,12 +44,12 @@ def test_get_univ3_price_cross_tick(oneE18, weth, usdc, usdc_whale, pricer):
   assert quote[0] == quoteCrossTicks
   
   ## check against quoter
-  slot0 = interface.IUniswapV3Pool("0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640").slot0()
+  slot0 = interface.IUniswapV3Pool("0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640").slot0()
   currentPX96 = slot0[0]
   limitP = currentPX96 * (100 + 10000) / 10000
   quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle(weth.address, usdc.address, quote[1], sell_amount, limitP, {'from': usdc_whale.address}).return_value
   print(quoterP)
-  assert (abs(quoterP - quote[0]) / quoterP) <= 0.0003 ## tens of thousandsth in quote error for a millions-dollar-worth swap
+  assert (abs(quoterP - quote[0]) / quoterP) <= 0.001 ## thousandsth in quote diff for a millions-dollar-worth swap
   
   ## fee-0.05% pool is the chosen one among (0.05%, 0.3%, 1%)!
   assert quote[1] == 500  

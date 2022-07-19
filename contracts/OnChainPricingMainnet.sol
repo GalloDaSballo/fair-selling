@@ -324,7 +324,26 @@ contract OnChainPricingMainnet {
         return (_maxInRangeQuote, _maxInRangeFee);
     }	
 	
-    /// @dev internal function to avoid stack too deap for Uniswap V3 pool in-range liquidity check
+    /// @dev tell if there exists some Uniswap V3 pool for given token pair
+    function checkUniV3PoolsExistence(address tokenIn, address tokenOut) public view returns (bool){
+        uint256 feeTypes = univ3_fees.length;	
+        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
+        bool _exist;
+        {    
+          for (uint256 i = 0; i < feeTypes;){
+             address _pool = _getUniV3PoolAddress(token0, token1, univ3_fees[i]);
+             if (_pool.isContract()) {
+                 _exist = true;
+                 break;
+             }
+             unchecked { ++i; }	
+          }				 
+        }	
+        return _exist;		
+    }
+	
+    /// @dev Uniswap V3 pool in-range liquidity check
+    /// @return true if cross-ticks full simulation required for the swap otherwise false (in-range liquidity would satisfy the swap)
     function checkUniV3InRangeLiquidity(address tokenIn, address tokenOut, uint256 amountIn, uint24 _fee, uint256 _uniV3SimSlippageBps) public view returns (bool, uint256){
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         {    
@@ -376,6 +395,10 @@ contract OnChainPricingMainnet {
     /// @dev Given the address of the input token & amount & the output token & connector token in between (input token ---> connector token ---> output token)
     /// @return the quote for it
     function getUniV3PriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public view returns (uint256) {
+        if (!checkUniV3PoolsExistence(tokenIn, connectorToken) || !checkUniV3PoolsExistence(connectorToken, tokenOut)){
+            return 0;
+        }
+		
         uint256 connectorAmount = getUniV3Price(tokenIn, amountIn, connectorToken);	
         if (connectorAmount > 0){	
             return getUniV3Price(connectorToken, connectorAmount, tokenOut);
