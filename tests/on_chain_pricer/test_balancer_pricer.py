@@ -84,9 +84,9 @@ def test_get_balancer_price_with_connector_analytical(oneE18, wbtc, usdc, weth, 
 def test_get_balancer_price_ohm_analytical(oneE18, ohm, dai, pricer):  
   ## 1e8
   sell_count = 1000
-  sell_amount = sell_count * oneE18
+  sell_amount = sell_count * 1000000000 ## 1e9
     
-  ## minimum quote for OHM in DAI(1e6)
+  ## minimum quote for OHM in DAI(1e18)
   p = sell_count * 10 * oneE18  
   quote = pricer.getBalancerPriceAnalytically(ohm.address, sell_amount, dai.address)
   assert quote >= p     

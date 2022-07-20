@@ -32,7 +32,7 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
 
     uint256 public slippage = 200; // 2% Initially
 
-    constructor(address _uniV3Simulator) OnChainPricingMainnet(_uniV3Simulator){
+    constructor(address _uniV3Simulator, address _balancerV2Simulator) OnChainPricingMainnet(_uniV3Simulator, _balancerV2Simulator){
         
     }
 

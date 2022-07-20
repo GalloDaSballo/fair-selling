@@ -41,13 +41,15 @@ def swapexecutor():
 @pytest.fixture
 def pricer():
   univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
-  return OnChainPricingMainnet.deploy(univ3simulator.address, {"from": a[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
+  return OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
 
 @pytest.fixture
 def lenient_contract():
   ## NOTE: We have 5% slippage on this one
   univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
-  c =  OnChainPricingMainnetLenient.deploy(univ3simulator.address, {"from": a[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
+  c = OnChainPricingMainnetLenient.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
   c.setSlippage(499, {"from": accounts.at(c.TECH_OPS(), force=True)})
 
   return c

@@ -44,8 +44,6 @@ contract UniV3SwapSimulator {
     using LowGasSafeMath for int256;
     using SafeCast for uint256;
     using SafeCast for int256;
-	
-    uint256 public constant MAX_BPS = 10000; 
     
     /// @dev View function which aims to simplify Uniswap V3 swap logic (no oracle/fee update, etc) to 
     /// @dev estimate the expected output for given swap parameters and slippage

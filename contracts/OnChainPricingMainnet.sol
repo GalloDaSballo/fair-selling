@@ -15,6 +15,7 @@ import "../interfaces/balancer/IBalancerV2WeightedPool.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
 import "../interfaces/uniswap/IV3Simulator.sol";
+import "../interfaces/balancer/IBalancerV2Simulator.sol";
 
 enum SwapType { 
     CURVE, //0
@@ -112,15 +113,23 @@ contract OnChainPricingMainnet {
 	
     /// @dev helper library to simulate Uniswap V3 swap
     address public uniV3Simulator;
+    /// @dev helper library to simulate Balancer V2 swap
+    address public balancerV2Simulator;
 	
     /// === TEST-ONLY ===
-    constructor(address _uniV3Simulator){
+    constructor(address _uniV3Simulator, address _balancerV2Simulator){
         uniV3Simulator = _uniV3Simulator;
+        balancerV2Simulator = _balancerV2Simulator;
     }
 	
     function setUniV3Simulator(address _uniV3Simulator) external {
         require(_uniV3Simulator != address(0));//TODO permission
         uniV3Simulator = _uniV3Simulator;
+    }
+	
+    function setBalancerV2Simulator(address _balancerV2Simulator) external {
+        require(_balancerV2Simulator != address(0));//TODO permission
+        balancerV2Simulator = _balancerV2Simulator;
     }
     /// === END TEST-ONLY ===
 
@@ -551,7 +560,6 @@ contract OnChainPricingMainnet {
     }
 	
     /// @dev Given the input/output token, returns the quote for input amount from Balancer V2 using its underlying math
-    /// @dev reference: https://hackmd.io/@shuklaayush/BkAtKbCY9
     function getBalancerPriceAnalytically(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) { 
         bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
         if (poolId == BALANCERV2_NONEXIST_POOLID){
@@ -559,7 +567,7 @@ contract OnChainPricingMainnet {
         }
 		
         address _pool = getAddressFromBytes32Msb(poolId);			
-        uint256 _pIn2Out;
+        uint256 _quote;
         
         {
             uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
@@ -572,10 +580,11 @@ contract OnChainPricingMainnet {
             require(_outTokenIdx < tokens.length, '!outBAL');
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
-            _pIn2Out = 1e18 * (_weights[_inTokenIdx] * balances[_outTokenIdx]) / (_weights[_outTokenIdx] * balances[_inTokenIdx]); // _outDecimals / _inDecimals
+            ExactInQueryParam memory _query = ExactInQueryParam(balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn);
+            _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
         }
 
-        return amountIn * _pIn2Out / 1e18;// _outDecimals / _inDecimals
+        return _quote;
     }
 	
     function _findTokenInBalancePool(address _token, address[] memory _tokens) internal pure returns (uint256){	    
