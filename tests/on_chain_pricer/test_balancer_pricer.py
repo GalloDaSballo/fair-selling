@@ -15,7 +15,7 @@ def test_get_balancer_price(oneE18, weth, usdc, pricer):
     
   ## minimum quote for ETH in USDC(1e6)
   p = 1 * 500 * 1000000  
-  quote = pricer.getBalancerPrice(weth.address, sell_amount, usdc.address).return_value
+  quote = pricer.getBalancerPrice(weth.address, sell_amount, usdc.address)
   assert quote >= p 
   
   ## price sanity check with fine liquidity
@@ -33,7 +33,7 @@ def test_get_balancer_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
     
   ## minimum quote for WBTC in USDC(1e6)
   p = sell_count * 10000 * 1000000  
-  quote = pricer.getBalancerPriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
+  quote = pricer.getBalancerPriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address)
   assert quote >= p    
   
   ## price sanity check with dime liquidity
@@ -50,7 +50,7 @@ def test_get_balancer_price_nonexistence(oneE18, cvx, weth, pricer):
   sell_amount = 100 * oneE18
     
   ## no proper pool in Balancer for WETH in CVX
-  quote = pricer.getBalancerPrice(weth.address, sell_amount, cvx.address).return_value
+  quote = pricer.getBalancerPrice(weth.address, sell_amount, cvx.address)
   assert quote == 0  
   
 """

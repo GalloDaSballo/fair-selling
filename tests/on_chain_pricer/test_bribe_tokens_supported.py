@@ -56,7 +56,7 @@ def test_are_bribes_supported(pricer, token):
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
   
-  res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
+  res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
 
 @pytest.mark.parametrize("token", TOKENS_18_DECIMALS)
@@ -69,7 +69,7 @@ def test_bribes_get_optimal_quote(pricer, token):
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
   
-  res = pricer.findOptimalSwap(token, WETH, AMOUNT).return_value
+  res = pricer.findOptimalSwap(token, WETH, AMOUNT)
   assert res[1] > 0
 
 

@@ -59,7 +59,7 @@ def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecut
 
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
-  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount).return_value
+  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount)
   assert quote[1] >= p 
 
   ## swap on chain
@@ -82,7 +82,7 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
 
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
-  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount).return_value
+  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount)
   assert quote[1] >= p 
 
   ## swap on chain
@@ -105,7 +105,7 @@ def test_swap_in_balancer_batch(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, sw
 
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
-  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount).return_value
+  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount)
   assert quote[1] >= p 
 
   ## swap on chain
@@ -129,7 +129,7 @@ def test_swap_in_balancer_single(oneE18, weth_whale, weth, usdc, pricer, swapexe
 
   ## minimum quote for WETH in USDC(1e6)
   p = 1 * 500 * 1000000  
-  quote = pricer.findOptimalSwap(weth.address, usdc.address, sell_amount).return_value
+  quote = pricer.findOptimalSwap(weth.address, usdc.address, sell_amount)
   assert quote[1] >= p 
 
   ## swap on chain
