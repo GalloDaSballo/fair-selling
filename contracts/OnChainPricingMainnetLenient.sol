@@ -45,7 +45,7 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
     // === PRICING === //
 
     /// @dev View function for testing the routing of the strategy
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external override returns (Quote memory q) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view override returns (Quote memory q) {
         q = _findOptimalSwap(tokenIn, tokenOut, amountIn);
         q.amountOut = q.amountOut * (MAX_BPS - slippage) / MAX_BPS;
     }

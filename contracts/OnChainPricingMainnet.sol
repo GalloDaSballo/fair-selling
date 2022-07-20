@@ -175,12 +175,12 @@ contract OnChainPricingMainnet {
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual view returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
     /// @dev View function for testing the routing of the strategy
-    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal returns (Quote memory) {
+    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal view returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
         uint256 length = wethInvolved? 5 : 7; // Add length you need
 
