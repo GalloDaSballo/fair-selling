@@ -17,10 +17,9 @@ struct UniV3SortPoolQuery{
     uint24 _fee;
     uint256 amountIn;
     bool zeroForOne;
-    uint256 _slippageAllowedBps;
 }
 
 interface IUniswapV3Simulator {
-    function simulateUniV3Swap(address _pool, address _token0, address _token1, bool _zeroForOne, uint24 _fee, uint256 _amountIn, uint256 _slippageAllowedBps) external view returns (uint256);
+    function simulateUniV3Swap(address _pool, address _token0, address _token1, bool _zeroForOne, uint24 _fee, uint256 _amountIn) external view returns (uint256);
     function checkInRangeLiquidity(UniV3SortPoolQuery memory _sortQuery) external view returns (bool, uint256);
 }

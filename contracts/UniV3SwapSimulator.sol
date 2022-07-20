@@ -16,7 +16,6 @@ struct UniV3SortPoolQuery{
     uint24 _fee;
     uint256 amountIn;
     bool zeroForOne;
-    uint256 _slippageAllowedBps;
 }
 
 interface IERC20 {
@@ -52,10 +51,7 @@ contract UniV3SwapSimulator {
     /// @dev estimate the expected output for given swap parameters and slippage
     /// @dev simplified version of https://github.com/Uniswap/v3-core/blob/main/contracts/UniswapV3Pool.sol#L596
     /// @return simulated output token amount using Uniswap V3 tick-based math
-    function simulateUniV3Swap(address _pool, address _token0, address _token1, bool _zeroForOne, uint24 _fee, uint256 _amountIn, uint256 _slippageAllowedBps) external view returns (uint256){
-        require(_slippageAllowedBps < MAX_BPS, '!SLIP');
-        require(_slippageAllowedBps > 0, '!SLI0');
-        
+    function simulateUniV3Swap(address _pool, address _token0, address _token1, bool _zeroForOne, uint24 _fee, uint256 _amountIn) external view returns (uint256){        
         // Get current state of the pool
         int24 _tickSpacing = IUniswapV3PoolSwapTick(_pool).tickSpacing();
         // lower limit if zeroForOne in terms of slippage, or upper limit for the other direction
@@ -65,7 +61,7 @@ contract UniV3SwapSimulator {
 		
         {
            (uint160 _currentPX96, int24 _currentTick,,,,,) = IUniswapV3PoolSwapTick(_pool).slot0();
-           _sqrtPriceLimitX96 = _getLimitPriceFromSlippageAllowance(_zeroForOne, _currentPX96, _slippageAllowedBps);
+           _sqrtPriceLimitX96 = _getLimitPrice(_zeroForOne);
            state = SwapStatus(_amountIn.toInt256(), _currentPX96, _currentTick, IUniswapV3PoolSwapTick(_pool).liquidity(), 0);
         }
 		
@@ -103,6 +99,11 @@ contract UniV3SwapSimulator {
     /// @dev retrieve next initialized tick for given Uniswap V3 pool
     function _getNextInitializedTick(TickNextWithWordQuery memory _nextTickQuery) internal view returns (int24, bool, uint160) {	
         (int24 tickNext, bool initialized) = TickBitmap.nextInitializedTickWithinOneWord(_nextTickQuery);
+        if (tickNext < TickMath.MIN_TICK) {
+           tickNext = TickMath.MIN_TICK;
+        } else if (tickNext > TickMath.MAX_TICK) {
+           tickNext = TickMath.MAX_TICK;
+        }
         uint160 sqrtPriceNextX96 = TickMath.getSqrtRatioAtTick(tickNext);
         return (tickNext, initialized, sqrtPriceNextX96);
     }
@@ -155,7 +156,7 @@ contract UniV3SwapSimulator {
         }
 		
         {		
-           uint160 _targetPX96 = _getTargetPriceForSwapStep(_sortQuery.zeroForOne, _tickNextPrice, _getLimitPriceFromSlippageAllowance(_sortQuery.zeroForOne, _currentPriceX96, _sortQuery._slippageAllowedBps));
+           uint160 _targetPX96 = _getTargetPriceForSwapStep(_sortQuery.zeroForOne, _tickNextPrice, _getLimitPrice(_sortQuery.zeroForOne));
            SwapExactInParam memory _exactInParams = SwapExactInParam(_sortQuery.amountIn, _sortQuery._fee, _currentPriceX96, _targetPX96, _liq, _sortQuery.zeroForOne);
            (uint256 _amtIn, uint160 _newPrice) = SwapMath._getExactInNextPrice(_exactInParams);
            _swapAfterPrice = _newPrice;
@@ -164,8 +165,9 @@ contract UniV3SwapSimulator {
         return (_swapAfterPrice, _tickNextPrice, _currentPriceX96);
     }
 	
-    function _getLimitPriceFromSlippageAllowance(bool _zeroForOne, uint160 _currentPX96, uint256 _slippageAllowedBps) internal pure returns (uint160) {
-        return _zeroForOne? (_currentPX96 * (MAX_BPS - _slippageAllowedBps).toUint160() / uint160(MAX_BPS)) : (_currentPX96 * (MAX_BPS + _slippageAllowedBps).toUint160() / uint160(MAX_BPS));
+    /// @dev https://etherscan.io/address/0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6#code#F1#L95
+    function _getLimitPrice(bool _zeroForOne) internal pure returns (uint160) {
+        return _zeroForOne? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1;
     }
 	
     function _getTargetPriceForSwapStep(bool _zeroForOne, uint160 sqrtPriceNextX96, uint160 _sqrtPriceLimitX96) internal pure returns (uint160) {
