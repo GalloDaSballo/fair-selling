@@ -336,9 +336,15 @@ contract OnChainPricingMainnet {
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         {    
              address _pool = _getUniV3PoolAddress(token0, token1, _fee);
-             if (!_pool.isContract() || IUniswapV3Pool(_pool).liquidity() <= 0) {
+             if (!_pool.isContract()) {
                  return (false, 0);
              }
+			 
+             (bool _basicCheck,,) = _checkPoolLiquidityAndBalances(_pool, IUniswapV3Pool(_pool).liquidity(), token0, token1, token0Price, amountIn);
+             if (!_basicCheck) {
+                 return (false, 0);
+             }
+			 
              UniV3SortPoolQuery memory _sortQuery = UniV3SortPoolQuery(_pool, token0, token1, _fee, amountIn, token0Price);
              return IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery);
         }
