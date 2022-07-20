@@ -14,11 +14,13 @@ BADGER = "0x3472A5A71965499acd81997a54BBA8D852C6E53d"
 CVX = "0x4e3fbd56cd56c3e72c1403e103b45db9da5b9d2b"
 DAI = "0x6b175474e89094c44da98b954eedeac495271d0f"
 WBTC = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+OHM="0x64aa3364F17a4D01c6f1751Fd97C2BD3D7e7f1D5"
 USDC_WHALE = "0x0a59649758aa4d66e25f08dd01271e891fe52199"
 BADGER_WHALE = "0xd0a7a8b98957b9cd3cfb9c0425abe44551158e9e"
 CVX_WHALE = "0xcf50b810e57ac33b91dcf525c6ddd9881b139332"
 DAI_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
 AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
+AURABAL = "0x616e8BfA43F920657B3497DBf40D6b1A02D4608d"
 BVE_CVX = "0xfd05D3C7fe2924020620A8bE4961bBaA747e6305"
 BVE_AURA = "0xBA485b556399123261a5F9c95d413B4f93107407"
 AURA_WHALE = "0x43B17088503F4CE1AED9fB302ED6BB51aD6694Fa"
@@ -31,18 +33,23 @@ CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
 WBTC_WHALE = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
 
 ## Contracts ##
+  
 @pytest.fixture
 def swapexecutor():
   return OnChainSwapMainnet.deploy({"from": a[0]})
   
 @pytest.fixture
 def pricer():
-  return OnChainPricingMainnet.deploy({"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
+  return OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
 
 @pytest.fixture
 def lenient_contract():
   ## NOTE: We have 5% slippage on this one
-  c =  OnChainPricingMainnetLenient.deploy({"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
+  c = OnChainPricingMainnetLenient.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
   c.setSlippage(499, {"from": accounts.at(c.TECH_OPS(), force=True)})
 
   return c
@@ -58,6 +65,14 @@ def processor(lenient_contract):
 @pytest.fixture
 def oneE18():
   return 1000000000000000000
+
+@pytest.fixture
+def aurabal():
+  return interface.ERC20(AURABAL)
+
+@pytest.fixture
+def ohm():
+  return interface.ERC20(OHM)
 
 @pytest.fixture
 def wbtc():
