@@ -12,6 +12,7 @@ import "../interfaces/uniswap/IV3Pool.sol";
 import "../interfaces/uniswap/IV3Quoter.sol";
 import "../interfaces/balancer/IBalancerV2Vault.sol";
 import "../interfaces/balancer/IBalancerV2WeightedPool.sol";
+import "../interfaces/balancer/IBalancerV2StablePool.sol";
 import "../interfaces/curve/ICurveRouter.sol";
 import "../interfaces/curve/ICurvePool.sol";
 import "../interfaces/uniswap/IV3Simulator.sol";
@@ -104,7 +105,7 @@ contract OnChainPricingMainnet {
     
     address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
     bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
-
+    bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;// Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
 
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
@@ -142,7 +143,7 @@ contract OnChainPricingMainnet {
 
     /// @dev Given tokenIn, out and amountIn, returns true if a quote will be non-zero
     /// @notice Doesn't guarantee optimality, just non-zero
-    function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external returns (bool) {
+    function isPairSupported(address tokenIn, address tokenOut, uint256 amountIn) external view returns (bool) {
         // Sorted by "assumed" reverse worst case
         // Go for higher gas cost checks assuming they are offering best precision / good price
 
@@ -175,12 +176,12 @@ contract OnChainPricingMainnet {
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual view returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
     /// @dev View function for testing the routing of the strategy
-    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal view returns (Quote memory) {
+    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
         uint256 length = wethInvolved? 5 : 7; // Add length you need
 
@@ -557,6 +558,10 @@ contract OnChainPricingMainnet {
         if (poolId == BALANCERV2_NONEXIST_POOLID){
             return 0;
         }
+        return getBalancerPriceWithinPool(poolId, tokenIn, amountIn, tokenOut);
+    }
+	
+    function getBalancerPriceWithinPool(bytes32 poolId, address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) {	
 		
         address[] memory assets = new address[](2);
         assets[0] = tokenIn;
@@ -579,14 +584,15 @@ contract OnChainPricingMainnet {
         if (poolId == BALANCERV2_NONEXIST_POOLID){
             return 0;
         }
-		
-        address _pool = getAddressFromBytes32Msb(poolId);			
-        uint256 _quote;
+        return getBalancerQuoteWithinPoolAnalytcially(poolId, tokenIn, amountIn, tokenOut);
+    }
+	
+    function getBalancerQuoteWithinPoolAnalytcially(bytes32 poolId, address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) {			
+        uint256 _quote;		
+        address _pool = getAddressFromBytes32Msb(poolId);
         
         {
-            uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
             (address[] memory tokens, uint256[] memory balances, ) = IBalancerV2Vault(BALANCERV2_VAULT).getPoolTokens(poolId);
-            require(_weights.length == tokens.length, '!lenBAL');
 			
             uint256 _inTokenIdx = _findTokenInBalancePool(tokenIn, tokens);
             require(_inTokenIdx < tokens.length, '!inBAL');
@@ -594,10 +600,23 @@ contract OnChainPricingMainnet {
             require(_outTokenIdx < tokens.length, '!outBAL');
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
-            ExactInQueryParam memory _query = ExactInQueryParam(balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn);
-            _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
+            try IBalancerV2StablePool(_pool).getAmplificationParameter() returns (uint256 currentAmp, bool isUpdating, uint256 precision) {
+                // stable pool math
+                {
+                   ExactInStableQueryParam memory _stableQuery = ExactInStableQueryParam(tokens, balances, currentAmp, _inTokenIdx, _outTokenIdx, amountIn, IBalancerV2StablePool(_pool).getSwapFeePercentage());
+                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenInForStable(_stableQuery);
+                }
+            } catch (bytes memory) {
+                // weighted pool math
+                {
+                   uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
+                   require(_weights.length == tokens.length, '!lenBAL');
+                   ExactInQueryParam memory _query = ExactInQueryParam(tokenIn, tokenOut, balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn, IBalancerV2WeightedPool(_pool).getSwapFeePercentage());
+                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
+                }
+            }
         }
-
+		
         return _quote;
     }
 	

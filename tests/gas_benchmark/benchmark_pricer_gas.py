@@ -39,7 +39,7 @@ def test_gas_only_balancer_v2(oneE18, weth, aura, pricer):
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert tx.return_value[0] == 5 ## BALANCER  
   assert tx.return_value[1] > 0  
-  assert tx.gas_used <= 95000 ## 91345 in test simulation
+  assert tx.gas_used <= 110000 ## 101190 in test simulation
 
 def test_gas_only_balancer_v2_with_weth(oneE18, wbtc, aura, pricer):
   token = aura # some swap (AURA-WETH-WBTC) only in Balancer V2 via WETH in between as connector
@@ -50,7 +50,7 @@ def test_gas_only_balancer_v2_with_weth(oneE18, wbtc, aura, pricer):
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx.return_value[0] == 6 ## BALANCERWITHWETH  
   assert tx.return_value[1] > 0  
-  assert tx.gas_used <= 145000 ## 141062 in test simulation
+  assert tx.gas_used <= 170000 ## 161690 in test simulation
 
 def test_gas_only_uniswap_v3(oneE18, weth, pricer):
   token = "0xf4d2888d29D722226FafA5d9B24F9164c092421E" # some swap (LOOKS-WETH) only in Uniswap V3
@@ -83,5 +83,5 @@ def test_gas_almost_everything(oneE18, wbtc, weth, pricer):
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert (tx.return_value[0] <= 3 or tx.return_value[0] == 5) ## CURVE or UNIV2 or SUSHI or UNIV3 or BALANCER  
   assert tx.return_value[1] > 0  
-  assert tx.gas_used <= 190000 ## 183810 in test simulation
+  assert tx.gas_used <= 210000 ## 200229 in test simulation
   

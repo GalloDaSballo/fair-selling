@@ -17,7 +17,7 @@ def test_get_univ3_price_in_range(oneE18, weth, usdc, usdc_whale, pricer):
   assert quote[0] == quoteInRange[1]
   
   ## check against quoter
-  quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle(weth.address, usdc.address, quote[1], sell_amount, 0, {'from': usdc_whale.address})
+  quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle(weth.address, usdc.address, quote[1], sell_amount, 0, {'from': usdc_whale.address}).return_value
   assert quoterP == quote[0]
   
   ## fee-0.05% pool is the chosen one among (0.05%, 0.3%, 1%)!
@@ -39,7 +39,7 @@ def test_get_univ3_price_cross_tick(oneE18, weth, usdc, usdc_whale, pricer):
   assert quote[0] == quoteCrossTicks
   
   ## check against quoter
-  quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle(weth.address, usdc.address, quote[1], sell_amount, 0, {'from': usdc_whale.address})
+  quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle(weth.address, usdc.address, quote[1], sell_amount, 0, {'from': usdc_whale.address}).return_value
   assert (abs(quoterP - quote[0]) / quoterP) <= 0.0015 ## thousandsth in quote diff for a millions-dollar-worth swap
   
   ## fee-0.05% pool is the chosen one among (0.05%, 0.3%, 1%)!

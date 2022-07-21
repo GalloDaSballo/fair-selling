@@ -17,6 +17,12 @@ library BalancerFixedPoint {
         return c;
     }
 
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, '!sub');
+        uint256 c = a - b;
+        return c;
+    }
+
     function divUp(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, '!b0');
 

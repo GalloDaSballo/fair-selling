@@ -69,7 +69,7 @@ def test_bribes_get_optimal_quote(pricer, token):
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
   
-  res = pricer.findOptimalSwap(token, WETH, AMOUNT)
+  res = pricer.findOptimalSwap(token, WETH, AMOUNT).return_value
   assert res[1] > 0
 
 
