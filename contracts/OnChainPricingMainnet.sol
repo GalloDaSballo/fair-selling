@@ -400,6 +400,10 @@ contract OnChainPricingMainnet {
         }
 		
         {
+            // TODO: In a later check, we check slot0 liquidity
+            // Is there any change that slot0 gives us more information about the liquidity in range,
+            // Such that optimistically it would immediately allow us to determine a winning pool?
+            // Prob winning pool would be: Lowest Fee, with Liquidity covered within the tick
              uint256 _t0Balance = IERC20(_token0).balanceOf(_pool);
              uint256 _t1Balance = IERC20(_token1).balanceOf(_pool);
 		
