@@ -59,14 +59,14 @@ def test_swap_in_univ3_single(oneE18, wbtc_whale, wbtc, usdc, pricer, swapexecut
 
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
-  quote = pricer.getUniV3Price(wbtc.address, sell_amount, usdc.address).return_value
-  assert quote >= p 
+  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount).return_value
+  assert quote[1] >= p 
 
   ## swap on chain
   slippageTolerance = 0.95 
   wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
-  minOutput = quote * slippageTolerance   
+  minOutput = quote[1] * slippageTolerance   
   balBefore = usdc.balanceOf(wbtc_whale)
   swapexecutor.doOptimalSwapWithQuote(wbtc.address, usdc.address, sell_amount, (3, minOutput, [], [3000]), {'from': wbtc_whale})
   balAfter = usdc.balanceOf(wbtc_whale)
@@ -82,14 +82,14 @@ def test_swap_in_univ3(oneE18, wbtc_whale, wbtc, weth, usdc, pricer, swapexecuto
 
   ## minimum quote for WBTC in USDC(1e6)
   p = 1 * 15000 * 1000000  
-  quote = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
-  assert quote >= p 
+  quote = pricer.findOptimalSwap(wbtc.address, usdc.address, sell_amount).return_value
+  assert quote[1] >= p 
 
   ## swap on chain
   slippageTolerance = 0.95 
   wbtc.transfer(swapexecutor.address, sell_amount, {'from': wbtc_whale})
   
-  minOutput = quote * slippageTolerance  
+  minOutput = quote[1] * slippageTolerance  
   ## encodedPath = swapexecutor.encodeUniV3TwoHop(wbtc.address, 500, weth.address, 500, usdc.address)   
   balBefore = usdc.balanceOf(wbtc_whale)
   swapexecutor.doOptimalSwapWithQuote(wbtc.address, usdc.address, sell_amount, (4, minOutput, [], [500,500]), {'from': wbtc_whale})
