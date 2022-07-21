@@ -149,4 +149,28 @@ def test_pricing_equivalency_almost_everything(oneE18, wbtc, weth, pricer, price
   assert tx.gas_used < tx2.gas_used
 
 
-### TODO: Test specific pricing functions for different underlying protocols
+### Test specific pricing functions for different underlying protocols
+
+def test_balancer_pricing_equivalency(oneE18, weth, usdc, pricer, pricer_legacy):  
+  ## 1e18
+  sell_amount = 1 * oneE18
+
+  quote = pricer.getBalancerPriceAnalytically(weth.address, sell_amount, usdc.address)
+  quote_legacy = pricer_legacy.getBalancerPrice(weth.address, sell_amount, usdc.address).return_value
+
+  assert quote >= quote_legacy # Optimized quote must be the same or better
+
+def test_balancer_pricing_with_connector_equivalency(wbtc, usdc, weth, pricer, pricer_legacy):  
+  ## 1e8
+  sell_count = 10
+  sell_amount = sell_count * 100000000
+    
+  quote = pricer.getBalancerPriceWithConnectorAnalytically(wbtc.address, sell_amount, usdc.address, weth.address)
+  quote_legacy = pricer_legacy.getBalancerPriceWithConnector(
+    wbtc.address, 
+    sell_amount, 
+    usdc.address, 
+    weth.address
+  ).return_value
+
+  assert quote >= quote_legacy # Optimized quote must be the same or better
