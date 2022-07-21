@@ -297,25 +297,33 @@ contract OnChainPricingMainnet {
         uint24 _maxInRangeFee;
 		
         {
-          uint24 _bestFee = _useSinglePoolInUniV3(tokenIn, tokenOut);
-          for (uint256 i = 0; i < feeTypes;){
-             uint24 _fee = univ3_fees[i];
-			 
-             // skip othter pools if there is a chosen best pool to go
-             if (_bestFee > 0 && _fee != _bestFee){
-                unchecked { ++i; }	
-                continue;
-             }
-			 
-             {			 
-                (bool _crossTick, uint256 _outAmt) = _checkSimulationInUniV3(tokenIn, tokenOut, amountIn, _fee);
-                if (_outAmt > _maxInRangeQuote){
-                    _maxInRangeQuote = _outAmt;
-                    _maxInRangeFee = _fee;
+            // Heuristic: If we already know high TVL Pools, use those
+            uint24 _bestFee = _useSinglePoolInUniV3(tokenIn, tokenOut);
+            // TODO: Can rewrite to skip the loop entire when `_bestFee`
+            for (uint256 i = 0; i < feeTypes;){
+                uint24 _fee = univ3_fees[i];
+                
+                // skip othter pools if there is a chosen best pool to go
+                if (_bestFee > 0 && _fee != _bestFee){
+                    unchecked { ++i; }	
+                    continue;
                 }
-                unchecked { ++i; }	
-             }
-          }        
+                
+                {			 
+                    // TODO: Partial rewrite to perform initial comparison against all simulations based on "liquidity in range"
+                    // If liq is in range, then lowest fee auto-wins
+                    // Else go down fee range with liq in range 
+                    // NOTE: A tick is like a ratio, so technically X ticks can offset a fee
+                    // Meaning we prob don't need full quote in majority of cases, but can compare number of ticks
+                    // per pool per fee and pre-rank based on that
+                    (bool _crossTick, uint256 _outAmt) = _checkSimulationInUniV3(tokenIn, tokenOut, amountIn, _fee);
+                    if (_outAmt > _maxInRangeQuote){
+                        _maxInRangeQuote = _outAmt;
+                        _maxInRangeFee = _fee;
+                    }
+                    unchecked { ++i; }	
+                }
+            }        
         }
 		
         return (_maxInRangeQuote, _maxInRangeFee);
@@ -359,10 +367,12 @@ contract OnChainPricingMainnet {
         }
     }
 	
-    /// @dev internal function to avoid stack too deap for 1) check in-range liquidity in Uniswap V3 pool 2) full cross-ticks simulation in Uniswap V3
+    /// @dev internal function to avoid stack too deep for 1) check in-range liquidity in Uniswap V3 pool 2) full cross-ticks simulation in Uniswap V3
     function _checkSimulationInUniV3(address tokenIn, address tokenOut, uint256 amountIn, uint24 _fee) internal view returns (bool, uint256) {
         bool _crossTick;
         uint256 _outAmt;
+        // TODO: Both `checkUniV3InRangeLiquidity` and `simulateUniV3Swap` recompute pool address
+        //      Refactor to only compute once and pass
         {
              // in-range swap check: find out whether the swap within current liquidity would move the price across next tick
              (bool _outOfInRange, uint256 _outputAmount) = checkUniV3InRangeLiquidity(tokenIn, tokenOut, amountIn, _fee);
@@ -641,6 +651,7 @@ contract OnChainPricingMainnet {
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
     function getBalancerV2Pool(address tokenIn, address tokenOut) public view returns(bytes32){
+        // TODO: Sort tokens so we can refactor to one check instead of two
         if ((tokenIn == WETH && tokenOut == CREAM) || (tokenOut == WETH && tokenIn == CREAM)){
             return BALANCERV2_CREAM_WETH_POOLID;
         } else if ((tokenIn == WETH && tokenOut == GNO) || (tokenOut == WETH && tokenIn == GNO)){
