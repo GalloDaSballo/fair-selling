@@ -7,7 +7,7 @@ import pytest
 """
 def test_simu_univ3_swap(oneE18, weth, usdc, pricer):  
   ## 1e18
-  sell_count = 10;
+  sell_count = 10
   sell_amount = sell_count * oneE18
     
   ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
@@ -21,7 +21,7 @@ def test_simu_univ3_swap(oneE18, weth, usdc, pricer):
 """
 def test_simu_univ3_swap2(oneE18, weth, wbtc, pricer):  
   ## 1e8
-  sell_count = 10;
+  sell_count = 10
   sell_amount = sell_count * 100000000
     
   ## minimum quote for BTC in ETH(1e18) ## Rip ETH price

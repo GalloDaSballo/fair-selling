@@ -22,7 +22,7 @@ def test_swap_in_curve(oneE18, weth_whale, weth, crv, pricer, swapexecutor):
   
   minOutput = quote[1] * slippageTolerance
   balBefore = crv.balanceOf(weth_whale)
-  poolBytes = pricer.convertToBytes32(quote[0]);
+  poolBytes = pricer.convertToBytes32(quote[0])
   swapexecutor.doOptimalSwapWithQuote(weth.address, crv.address, sell_amount, (0, minOutput, [poolBytes], []), {'from': weth_whale})
   balAfter = crv.balanceOf(weth_whale)
   assert (balAfter - balBefore) >= minOutput
