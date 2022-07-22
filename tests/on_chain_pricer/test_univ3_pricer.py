@@ -14,7 +14,7 @@ def test_get_univ3_price_in_range(oneE18, weth, usdc, usdc_whale, pricer):
   p = sell_count * 900 * 1000000  
   quote = pricer.sortUniV3Pools(weth.address, sell_amount, usdc.address)
   assert quote[0] >= p 
-  quoteInRange = pricer.checkUniV3InRangeLiquidity(weth.address, usdc.address, sell_amount, quote[1])
+  quoteInRange = pricer.checkUniV3InRangeLiquidity(usdc.address, weth.address, sell_amount, quote[1], False, "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
   assert quote[0] == quoteInRange[1]
   
   ## check against quoter
@@ -36,7 +36,7 @@ def test_get_univ3_price_cross_tick(oneE18, weth, usdc, usdc_whale, pricer):
   p = sell_count * 900 * 1000000  
   quote = pricer.sortUniV3Pools(weth.address, sell_amount, usdc.address)
   assert quote[0] >= p 
-  quoteCrossTicks = pricer.simulateUniV3Swap(weth.address, sell_amount, usdc.address, quote[1])
+  quoteCrossTicks = pricer.simulateUniV3Swap(usdc.address, sell_amount, weth.address, quote[1], False, "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
   assert quote[0] == quoteCrossTicks
   
   ## check against quoter

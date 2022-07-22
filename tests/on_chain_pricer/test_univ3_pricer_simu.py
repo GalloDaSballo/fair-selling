@@ -12,7 +12,7 @@ def test_simu_univ3_swap(oneE18, weth, usdc, pricer):
     
   ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
   p = sell_count * 900 * 1000000  
-  quote = pricer.simulateUniV3Swap(weth.address, sell_amount, usdc.address, 500)
+  quote = pricer.simulateUniV3Swap(usdc.address, sell_amount, weth.address, 500, False, "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
   
   assert quote >= p  
 
@@ -26,7 +26,7 @@ def test_simu_univ3_swap2(oneE18, weth, wbtc, pricer):
     
   ## minimum quote for BTC in ETH(1e18) ## Rip ETH price
   p = sell_count * 14 * oneE18  
-  quote = pricer.simulateUniV3Swap(wbtc.address, sell_amount, weth.address, 500)
+  quote = pricer.simulateUniV3Swap(wbtc.address, sell_amount, weth.address, 500, True, "0x4585FE77225b41b697C938B018E2Ac67Ac5a20c0")
   
   assert quote >= p  
 
