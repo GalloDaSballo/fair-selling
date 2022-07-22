@@ -122,5 +122,20 @@ def test_get_balancer_price_aurabal_analytical(oneE18, aurabal, weth, pricer):
     
   ## there is a proper pool in Balancer for AURABAL in WETH
   quote = pricer.getBalancerPriceAnalytically(aurabal.address, sell_amount, weth.address)
-  assert quote >= p 
+  assert quote >= p     
+  
+"""
+    getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
+"""
+def test_get_balancer_price_aurabal_bpt_analytical(oneE18, aurabal, balethbpt, pricer):  
+  ## 1e18
+  sell_count = 100
+  sell_amount = sell_count * oneE18
+  
+  ## minimum quote for BAL-ETH bpt in AURABAL(1e18) https://app.balancer.fi/#/pool/0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249
+  p = sell_count * 1 * oneE18  
+    
+  ## there is a proper pool in Balancer for AURABAL in BAL-ETH bpt
+  quote = pricer.findOptimalSwap(balethbpt.address, aurabal.address, sell_amount).return_value
+  assert quote[1] >= p 
   
