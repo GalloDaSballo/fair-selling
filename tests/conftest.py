@@ -46,6 +46,10 @@ def pricer():
   return OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
 
 @pytest.fixture
+def pricer_legacy():
+  return FullOnChainPricingMainnet.deploy({"from": a[0]})
+
+@pytest.fixture
 def lenient_contract():
   ## NOTE: We have 5% slippage on this one
   univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
