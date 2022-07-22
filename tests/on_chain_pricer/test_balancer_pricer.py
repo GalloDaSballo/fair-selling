@@ -7,7 +7,7 @@ from brownie import *
 import pytest     
   
 """
-    getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
+    getBalancerPriceAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B
 """
 def test_get_balancer_price_stable_analytical(oneE18, usdc, dai, pricer):  
   ## 1e18
@@ -19,13 +19,11 @@ def test_get_balancer_price_stable_analytical(oneE18, usdc, dai, pricer):
     
   ## there is a proper pool in Balancer for DAI in USDC
   poolId = pricer.BALANCERV2_DAI_USDC_USDT_POOLID()
-  q = pricer.getBalancerPriceWithinPool(poolId, dai.address, sell_amount, usdc.address).return_value
-  assert q >= p  
   quote = pricer.getBalancerQuoteWithinPoolAnalytcially(poolId, dai.address, sell_amount, usdc.address)
-  assert quote == q 
+  assert quote >= p
 
 """
-    getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
+    getBalancerPriceAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B
 """
 def test_get_balancer_price(oneE18, weth, usdc, pricer):  
   ## 1e18
@@ -33,7 +31,7 @@ def test_get_balancer_price(oneE18, weth, usdc, pricer):
     
   ## minimum quote for ETH in USDC(1e6)
   p = 1 * 500 * 1000000  
-  quote = pricer.getBalancerPrice(weth.address, sell_amount, usdc.address).return_value
+  quote = pricer.getBalancerPriceAnalytically(weth.address, sell_amount, usdc.address)
   assert quote >= p 
   
   ## price sanity check with fine liquidity
@@ -42,7 +40,7 @@ def test_get_balancer_price(oneE18, weth, usdc, pricer):
   #assert (quote / 1000000) >= (p1 / p2) * 0.98
   
 """
-    getBalancerPriceWithConnector quote for token A swapped to token B with connector token C: A -> C -> B
+    getBalancerPriceWithConnectorAnalytically quote for token A swapped to token B with connector token C: A -> C -> B
 """
 def test_get_balancer_price_with_connector(oneE18, wbtc, usdc, weth, pricer):  
   ## 1e8
@@ -51,7 +49,7 @@ def test_get_balancer_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
     
   ## minimum quote for WBTC in USDC(1e6)
   p = sell_count * 15000 * 1000000  
-  quote = pricer.getBalancerPriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address).return_value
+  quote = pricer.getBalancerPriceWithConnectorAnalytically(wbtc.address, sell_amount, usdc.address, weth.address)
   assert quote >= p    
   
   ## price sanity check with dime liquidity
@@ -59,17 +57,6 @@ def test_get_balancer_price_with_connector(oneE18, wbtc, usdc, weth, pricer):
   #p1 = get_coinmarketcap_price('3717', yourCMCKey) ## wbtc
   #p2 = get_coinmarketcap_price('3408', yourCMCKey) ## usdc
   #assert (quote / 1000000 / sell_count) >= (p1 / p2) * 0.75
-  
-"""
-    getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
-"""
-def test_get_balancer_price_nonexistence(oneE18, cvx, weth, pricer):  
-  ## 1e18
-  sell_amount = 100 * oneE18
-    
-  ## no proper pool in Balancer for WETH in CVX
-  quote = pricer.getBalancerPrice(weth.address, sell_amount, cvx.address).return_value
-  assert quote == 0  
   
 """
     getBalancerPriceAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B analytically
@@ -81,20 +68,7 @@ def test_get_balancer_price_analytical(oneE18, weth, usdc, pricer):
   ## minimum quote for ETH in USDC(1e6)
   p = 1 * 500 * 1000000  
   quote = pricer.getBalancerPriceAnalytically(weth.address, sell_amount, usdc.address)
-  assert quote >= p  
-  
-"""
-    getBalancerPriceWithConnectorAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B analytically
-"""
-def test_get_balancer_price_with_connector_analytical(oneE18, wbtc, usdc, weth, pricer):  
-  ## 1e8
-  sell_count = 10
-  sell_amount = sell_count * 100000000
-    
-  ## minimum quote for WBTC in USDC(1e6)
-  p = sell_count * 15000 * 1000000  
-  quote = pricer.getBalancerPriceWithConnectorAnalytically(wbtc.address, sell_amount, usdc.address, weth.address)
-  assert quote >= p       
+  assert quote >= p   
   
 """
     getBalancerPriceAnalytically quote for token A swapped to token B directly using given balancer pool: A - > B analytically

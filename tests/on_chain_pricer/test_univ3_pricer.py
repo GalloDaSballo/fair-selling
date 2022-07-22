@@ -7,10 +7,11 @@ import pytest
 """
 def test_get_univ3_price_in_range(oneE18, weth, usdc, usdc_whale, pricer):  
   ## 1e18
-  sell_amount = 20 * oneE18
+  sell_count = 1
+  sell_amount = sell_count * oneE18
     
   ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
-  p = 1 * 900 * 1000000  
+  p = sell_count * 900 * 1000000  
   quote = pricer.sortUniV3Pools(weth.address, sell_amount, usdc.address)
   assert quote[0] >= p 
   quoteInRange = pricer.checkUniV3InRangeLiquidity(weth.address, usdc.address, sell_amount, quote[1])

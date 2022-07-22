@@ -445,73 +445,11 @@ contract OnChainPricingMainnet {
         }
     }
 	
-    /// @dev query swap result from Uniswap V3 quoter for given tokenIn -> tokenOut with amountIn & fee
-    /// @dev this "call and revert" method consumes tons of gas
-    function _getUniV3QuoterQuery(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn) internal returns (uint256){
-        uint256 quote = IV3Quoter(UNIV3_QUOTER).quoteExactInputSingle(tokenIn, tokenOut, fee, amountIn, 0);
-        return quote;
-    }
-	
     /// @dev return token0 & token1 and if token0 equals tokenIn
     function _ifUniV3Token0Price(address tokenIn, address tokenOut) internal pure returns (address, address, bool){
         (address token0, address token1) = tokenIn < tokenOut ? (tokenIn, tokenOut) : (tokenOut, tokenIn);
         return (token0, token1, token0 == tokenIn);
     }
-	
-    /// @dev Given the address of the input token & the output token & fee tier 
-    /// @dev with trade amount & indicator if token0 pricing required (token1/token0 e.g., token0 -> token1)
-    /// @dev note there are some heuristic checks around the price like pool reserve should satisfy the swap amount
-    /// @return the current price in V3 for it
-    //function _getUniV3RateHeuristic(address token0, address token1, uint24 fee, bool token0Price, uint256 amountIn) internal view returns (uint256) {
-	        
-        //uint256 _t0Decimals = 10 ** IERC20Metadata(token0).decimals();
-        //uint256 _t1Decimals = 10 ** IERC20Metadata(token1).decimals();
-		
-        // Heuristically reserve with spot price check: ensure the pool tokenOut reserve makes sense in terms of thespot price [amountOutput based on slot0 price]
-        //(uint256 rate, uint256 amountOutput) = _getOutputWithSlot0Price(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals, amountIn);
-        //if ((token0Price? _t1Balance : _t0Balance) <= amountOutput){
-        //    return 0;		
-        //}
-		
-        // Heuristically reserves comparison check: ensure the pool [reserve comparison is consistent with the slot0 price comparison], 
-        // i.e., asset in less amount should be more expensive in AMM pool
-        //bool token0MoreExpensive = _compareUniV3Tokens(token0Price, rate);
-        //bool token0MoreReserved = _compareUniV3TokenReserves(_t0Balance, _t1Balance, _t0Decimals, _t1Decimals);
-        //if (token0MoreExpensive == token0MoreReserved){
-        //    return 0;		
-        //}
-        
-        //return amountOutput;
-    //}
-	
-    /// @dev calculate output amount according to Uniswap V3 spot price (slot0)
-    function _getOutputWithSlot0Price(address token0, address token1, address pool, bool token0Price, uint256 _t0Decimals, uint256 _t1Decimals, uint256 amountIn) internal view returns (uint256, uint256) {
-        uint256 rate = _queryUniV3PriceWithSlot(token0, token1, pool, token0Price, _t0Decimals, _t1Decimals);
-        uint256 amountOutput = rate * amountIn * (token0Price? _t1Decimals : _t0Decimals) / (token0Price? _t0Decimals : _t1Decimals) / 1e18;
-        return (rate, amountOutput);
-    }
-	
-    /// @dev query current price from V3 pool interface(slot0) with given pool & token0 & token1
-    /// @dev and indicator if token0 pricing required (token1/token0 e.g., token0 -> token1)
-    ///	@return the price of required token scaled with 1e18
-    function _queryUniV3PriceWithSlot(address token0, address token1, address pool, bool token0Price, uint256 _t0Decimals, uint256 _t1Decimals) internal view returns (uint256) {			
-        (uint256 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-        if (token0Price) {
-            return (((_t0Decimals * sqrtPriceX96 >> 96) * sqrtPriceX96) >> 96) * 1e18 / _t1Decimals;
-        } else {
-            return ((_t1Decimals << 192) / sqrtPriceX96 / sqrtPriceX96) * 1e18 / _t0Decimals;
-        }
-    }
-	
-    /// @dev check if token0 is more expensive than token1 given slot0 price & if token0 pricing required
-    //function _compareUniV3Tokens(bool token0Price, uint256 rate) internal view returns (bool) {
-    //    return token0Price? (rate > 1e18) : (rate < 1e18);
-    //}
-	
-    /// @dev check if token0 reserve is bigger than token1 reserve
-    //function _compareUniV3TokenReserves(uint256 _t0Balance, uint256 _t1Balance, uint256 _t0Decimals, uint256 _t1Decimals) internal view returns (bool) {
-    //    return (_t0Balance / _t0Decimals) > (_t1Balance / _t1Decimals);
-    //}
 	
     /// @dev query with the address of the token0 & token1 & the fee tier
     /// @return the uniswap v3 pool address
@@ -551,32 +489,6 @@ contract OnChainPricingMainnet {
     }	
 
     /// === BALANCER === ///
-	
-    /// @dev Given the input/output token, returns the quote for input amount from Balancer V2
-    function getBalancerPrice(address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) { 
-        bytes32 poolId = getBalancerV2Pool(tokenIn, tokenOut);
-        if (poolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
-        }
-        return getBalancerPriceWithinPool(poolId, tokenIn, amountIn, tokenOut);
-    }
-	
-    function getBalancerPriceWithinPool(bytes32 poolId, address tokenIn, uint256 amountIn, address tokenOut) public returns (uint256) {	
-		
-        address[] memory assets = new address[](2);
-        assets[0] = tokenIn;
-        assets[1] = tokenOut;
-		
-        BatchSwapStep[] memory swaps = new BatchSwapStep[](1);
-        swaps[0] = BatchSwapStep(poolId, 0, 1, amountIn, "");
-		
-        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
-		
-        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
-
-        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;
-    }
 	
     /// @dev Given the input/output token, returns the quote for input amount from Balancer V2 using its underlying math
     function getBalancerPriceAnalytically(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) { 
@@ -629,34 +541,6 @@ contract OnChainPricingMainnet {
             unchecked{ ++i; }
         } 
         return type(uint256).max;
-    }
-	
-    /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2
-    function getBalancerPriceWithConnector(address tokenIn, uint256 amountIn, address tokenOut, address connectorToken) public returns (uint256) { 
-        bytes32 firstPoolId = getBalancerV2Pool(tokenIn, connectorToken);
-        if (firstPoolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
-        }
-        bytes32 secondPoolId = getBalancerV2Pool(connectorToken, tokenOut);
-        if (secondPoolId == BALANCERV2_NONEXIST_POOLID){
-            return 0;
-        }
-		
-        address[] memory assets = new address[](3);
-        assets[0] = tokenIn;
-        assets[1] = connectorToken;
-        assets[2] = tokenOut;
-		
-        BatchSwapStep[] memory swaps = new BatchSwapStep[](2);
-        swaps[0] = BatchSwapStep(firstPoolId, 0, 1, amountIn, "");
-        swaps[1] = BatchSwapStep(secondPoolId, 1, 2, 0, "");// amount == 0 means use all from previous step
-		
-        FundManagement memory funds = FundManagement(address(this), false, address(this), false);
-		
-        int256[] memory assetDeltas = IBalancerV2Vault(BALANCERV2_VAULT).queryBatchSwap(SwapKind.GIVEN_IN, swaps, assets, funds);
-
-        // asset deltas: either transferring assets from the sender (for positive deltas) or to the recipient (for negative deltas).
-        return assetDeltas.length > 0 ? uint256(0 - assetDeltas[assetDeltas.length - 1]) : 0;    
     }
 	
     /// @dev Given the input/output/connector token, returns the quote for input amount from Balancer V2 using its underlying math
