@@ -44,4 +44,57 @@ def test_simu_univ3_swap_sort_pools(oneE18, dai, usdc, weth, pricer):
 
   ## min price
   assert quoteInRangeAndFee[0] >= p 
-  assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool got better quote than fee-0.05% pool
+  assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool got better quote than fee-0.05% pool 
+  
+def test_simu_univ3_swap_sort_pools_usdt(oneE18, usdt, weth, pricer):  
+  ## 1e18
+  sell_amount = 10 * oneE18
+
+  ## minimum quote for WETH in USDT(1e6)
+  p = 10 * 600 * 1000000  
+  quoteInRangeAndFee = pricer.sortUniV3Pools(weth.address, sell_amount, usdt.address)
+
+  ## min price
+  assert quoteInRangeAndFee[0] >= p 
+  assert quoteInRangeAndFee[1] == 500 ## fee-0.05% pool 
+  
+def test_simu_univ3_swap_usdt_usdc(oneE18, usdt, usdc, pricer):  
+  ## 1e18
+  sell_amount = 10000 * 1000000
+
+  ## minimum quote for USDC in USDT(1e6)
+  p = 10000 * 0.999 * 1000000  
+  quoteInRangeAndFee = pricer.sortUniV3Pools(usdc.address, sell_amount, usdt.address)
+
+  ## min price
+  assert quoteInRangeAndFee[0] >= p 
+  assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool
+  
+def test_simu_univ3_swap_tusd_usdc(oneE18, tusd, usdc, pricer):  
+  ## 1e18
+  sell_amount = 10000 * 1000000
+
+  ## minimum quote for USDC in TUSD(1e18)
+  p = 10000 * 0.999 * oneE18  
+  quoteInRangeAndFee = pricer.sortUniV3Pools(usdc.address, sell_amount, tusd.address)
+
+  ## min price
+  assert quoteInRangeAndFee[0] >= p 
+  assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool
+  
+def test_get_univ3_with_connector_no_second_pair(oneE18, balethbpt, usdc, weth, pricer):  
+  ## 1e18
+  sell_amount = 10000 * 1000000
+
+  ## no swap path for USDC -> WETH -> BALETHBPT in Uniswap V3
+  quoteInRangeAndFee = pricer.getUniV3PriceWithConnector(usdc.address, sell_amount, balethbpt.address, weth.address)
+  assert quoteInRangeAndFee == 0
+  
+def test_get_univ3_with_connector_first_pair_quote_zero(oneE18, badger, usdc, weth, pricer):  
+  ## 1e18
+  sell_amount = 10000 * 1000000
+
+  ## not enough liquidity for path for BADGER -> WETH -> USDC in Uniswap V3
+  quoteInRangeAndFee = pricer.getUniV3PriceWithConnector(badger.address, sell_amount, usdc.address, weth.address)
+  assert quoteInRangeAndFee == 0 
+ 

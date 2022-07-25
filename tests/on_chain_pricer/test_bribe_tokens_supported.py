@@ -71,5 +71,18 @@ def test_bribes_get_optimal_quote(pricer, token):
   
   res = pricer.findOptimalSwap(token, WETH, AMOUNT).return_value
   assert res[1] > 0
+  
+def test_only_sushi_support(oneE18, xsushi, usdc, pricer):  
+  ## 1e18
+  sell_amount = 100 * oneE18
 
+  supported = pricer.isPairSupported(xsushi.address, usdc.address, sell_amount)
+  assert supported == True
+  
+def test_only_curve_support(oneE18, usdc, pricer):  
+  ## 1e18
+  sell_amount = 1000 * oneE18
+
+  supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
+  assert supported == True
 

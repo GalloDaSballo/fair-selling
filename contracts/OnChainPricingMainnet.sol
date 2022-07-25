@@ -479,7 +479,7 @@ contract OnChainPricingMainnet {
         (address token0, address token1) = tokenIn < tokenOut ? (tokenIn, tokenOut) : (tokenOut, tokenIn);
         if (token1 == WETH && (token0 == USDC || token0 == WBTC || token0 == DAI)) {
             return 500;
-        } else if (token0 == WETH && token0 == USDT) {
+        } else if (token0 == WETH && token1 == USDT) {
             return 500;
         } else if (token1 == USDC && token0 == DAI) {
             return 100;

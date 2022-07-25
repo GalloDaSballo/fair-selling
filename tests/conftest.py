@@ -28,6 +28,9 @@ BALANCER_VAULT = "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
 BVE_AURA_WETH_AURA_POOL_ID = "0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267"
 CVX_BVECVX_POOL = "0x04c90C198b2eFF55716079bc06d7CCc4aa4d7512"
 BALETH_BPT = "0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56"
+USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7"
+TUSD = "0x0000000000085d4780B73119b644AE5ecd22b376"
+XSUSHI = "0x8798249c2E607446EfB7Ad49eC89dD1865Ff4272"
 
 WETH_WHALE = "0xe78388b4ce79068e89bf8aa7f218ef6b9ab0e9d0"
 CRV = "0xD533a949740bb3306d119CC777fa900bA034cd52"
@@ -70,6 +73,18 @@ def processor(lenient_contract):
 @pytest.fixture
 def oneE18():
   return 1000000000000000000
+
+@pytest.fixture
+def xsushi():
+  return interface.ERC20(XSUSHI)
+
+@pytest.fixture
+def tusd():
+  return interface.ERC20(TUSD)
+
+@pytest.fixture
+def usdt():
+  return interface.ERC20(USDT)
 
 @pytest.fixture
 def balethbpt():

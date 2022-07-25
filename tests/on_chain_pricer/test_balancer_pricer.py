@@ -113,3 +113,19 @@ def test_get_balancer_price_aurabal_bpt_analytical(oneE18, aurabal, balethbpt, p
   quote = pricer.findOptimalSwap(balethbpt.address, aurabal.address, sell_amount).return_value
   assert quote[1] >= p 
   
+def test_balancer_not_supported_tokens(oneE18, tusd, usdc, pricer):  
+  ## tokenIn not in the given balancer pool
+  with brownie.reverts("!inBAL"):
+       supported = pricer.getBalancerQuoteWithinPoolAnalytcially(pricer.BALANCERV2_DAI_USDC_USDT_POOLID(), tusd.address, 1000 * oneE18, usdc.address)
+  ## tokenOut not in the given balancer pool
+  with brownie.reverts("!outBAL"):
+       supported = pricer.getBalancerQuoteWithinPoolAnalytcially(pricer.BALANCERV2_DAI_USDC_USDT_POOLID(), usdc.address, 1000 * 1000000, tusd.address)
+  
+def test_get_balancer_with_connector_no_second_pair(oneE18, balethbpt, badger, weth, pricer):  
+  ## 1e18
+  sell_amount = 1000 * oneE18
+
+  ## no swap path for BALETHBPT -> WETH -> BADGER in Balancer V2
+  quoteInRangeAndFee = pricer.getBalancerPriceWithConnectorAnalytically(balethbpt.address, sell_amount, badger.address, weth.address)
+  assert quoteInRangeAndFee == 0
+  
