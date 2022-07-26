@@ -97,4 +97,18 @@ def test_get_univ3_with_connector_first_pair_quote_zero(oneE18, badger, usdc, we
   ## not enough liquidity for path for BADGER -> WETH -> USDC in Uniswap V3
   quoteInRangeAndFee = pricer.getUniV3PriceWithConnector(badger.address, sell_amount, usdc.address, weth.address)
   assert quoteInRangeAndFee == 0 
+  
+def test_only_sushi_support(oneE18, xsushi, usdc, pricer):  
+  ## 1e18
+  sell_amount = 100 * oneE18
+
+  supported = pricer.isPairSupported(xsushi.address, usdc.address, sell_amount)
+  assert supported == True
+  
+def test_only_curve_support(oneE18, usdc, pricer):  
+  ## 1e18
+  sell_amount = 1000 * oneE18
+
+  supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
+  assert supported == True
  

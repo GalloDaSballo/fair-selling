@@ -73,3 +73,23 @@ def test_get_univ3_price_with_connector_stablecoin(oneE18, dai, usdc, weth, pric
 
   ## min price 
   assert quoteWithConnector >= p    
+
+"""
+    test case for COW token to fix reported issue https://github.com/GalloDaSballo/fair-selling/issues/26
+"""
+def test_get_univ3_price_cow(oneE18, weth, usdc_whale, pricer):  
+  ## 1e18
+  token = "0xdef1ca1fb7fbcdc777520aa7f396b4e015f497ab"
+  sell_count = 12209
+  sell_amount = sell_count * oneE18
+    
+  ## minimum quote for COW in ETH(1e18)
+  p = sell_count * 0.00005 * oneE18   
+  quote = pricer.sortUniV3Pools(token, sell_amount, weth.address)
+  print(quote)
+  assert quote[0] >= p 
+  assert quote[1] == 10000
+  
+  ## check against quoter
+  quoterP = interface.IV3Quoter(pricer.UNIV3_QUOTER()).quoteExactInputSingle.call(token, weth.address, quote[1], sell_amount, 0, {'from': usdc_whale.address})
+  assert quoterP == quote[0]

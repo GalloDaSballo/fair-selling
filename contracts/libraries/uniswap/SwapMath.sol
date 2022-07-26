@@ -106,7 +106,7 @@ library SwapMath {
         uint256 amountRemainingLessFee = FullMath.mulDiv(_exactInParams._amountIn, 1e6 - (_exactInParams._fee), 1e6);
         uint256 amountIn = _exactInParams._zeroForOne? SqrtPriceMath.getAmount0Delta(_exactInParams._targetPriceX96, _exactInParams._currentPriceX96, _exactInParams._liquidity, true) : 
                                                        SqrtPriceMath.getAmount1Delta(_exactInParams._currentPriceX96, _exactInParams._targetPriceX96, _exactInParams._liquidity, true);
-        if (amountRemainingLessFee >= _exactInParams._amountIn) sqrtRatioNextX96 = _exactInParams._targetPriceX96;
+        if (amountRemainingLessFee >= amountIn) sqrtRatioNextX96 = _exactInParams._targetPriceX96;
         else sqrtRatioNextX96 = SqrtPriceMath.getNextSqrtPriceFromInput(_exactInParams._currentPriceX96, _exactInParams._liquidity, amountRemainingLessFee, _exactInParams._zeroForOne);
         return (amountIn, sqrtRatioNextX96);
     }

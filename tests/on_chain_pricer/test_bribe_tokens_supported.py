@@ -58,31 +58,7 @@ def test_are_bribes_supported(pricer, token):
   
   res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
-
-@pytest.mark.parametrize("token", TOKENS_18_DECIMALS)
-def test_bribes_get_optimal_quote(pricer, token):
-  """
-    Given a bunch of tokens historically used as bribes, verifies the pricer will return non-zero value
-    We sell all to WETH which is pretty realistic
-  """
-
-  ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
-  AMOUNT = 1e18
   
-  res = pricer.findOptimalSwap(token, WETH, AMOUNT).return_value
-  assert res[1] > 0
-  
-def test_only_sushi_support(oneE18, xsushi, usdc, pricer):  
-  ## 1e18
-  sell_amount = 100 * oneE18
-
-  supported = pricer.isPairSupported(xsushi.address, usdc.address, sell_amount)
-  assert supported == True
-  
-def test_only_curve_support(oneE18, usdc, pricer):  
-  ## 1e18
-  sell_amount = 1000 * oneE18
-
-  supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
-  assert supported == True
+  quote = pricer.findOptimalSwap.call(token, WETH, AMOUNT)
+  assert quote[1] > 0
 
