@@ -107,7 +107,7 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
     
     address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
-    bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
+    bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
     bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;// Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
 
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
@@ -562,46 +562,46 @@ contract OnChainPricingMainnet {
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
     function getBalancerV2Pool(address tokenIn, address tokenOut) public view returns(bytes32){
-        // TODO: Sort tokens so we can refactor to one check instead of two
-        if ((tokenIn == WETH && tokenOut == CREAM) || (tokenOut == WETH && tokenIn == CREAM)){
+        (address token0, address token1) = tokenIn < tokenOut ? (tokenIn, tokenOut) : (tokenOut, tokenIn);
+        if (token0 == CREAM && token1 == WETH){
             return BALANCERV2_CREAM_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == GNO) || (tokenOut == WETH && tokenIn == GNO)){
+        } else if (token0 == GNO && token1 == WETH){
             return BALANCERV2_GNO_WETH_POOLID;
-        } else if ((tokenIn == WBTC && tokenOut == BADGER) || (tokenOut == WBTC && tokenIn == BADGER)){
+        } else if (token0 == WBTC && token1 == BADGER){
             return BALANCERV2_BADGER_WBTC_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == FEI) || (tokenOut == WETH && tokenIn == FEI)){
+        } else if (token0 == FEI && token1 == WETH){
             return BALANCERV2_FEI_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == BAL) || (tokenOut == WETH && tokenIn == BAL)){
+        } else if (token0 == BAL && token1 == WETH){
             return BALANCERV2_BAL_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == USDC) || (tokenOut == WETH && tokenIn == USDC)){
+        } else if (token0 == USDC && token1 == WETH){
             return BALANCERV2_USDC_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == WBTC) || (tokenOut == WETH && tokenIn == WBTC)){
+        } else if (token0 == WBTC && token1 == WETH){
             return BALANCERV2_WBTC_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == WSTETH) || (tokenOut == WETH && tokenIn == WSTETH)){
+        } else if (token0 == WSTETH && token1 == WETH){
             return BALANCERV2_WSTETH_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == LDO) || (tokenOut == WETH && tokenIn == LDO)){
+        } else if (token0 == LDO && token1 == WETH){
             return BALANCERV2_LDO_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == SRM) || (tokenOut == WETH && tokenIn == SRM)){
+        } else if (token0 == SRM && token1 == WETH){
             return BALANCERV2_SRM_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == rETH) || (tokenOut == WETH && tokenIn == rETH)){
+        } else if (token0 == rETH && token1 == WETH){
             return BALANCERV2_rETH_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == AKITA) || (tokenOut == WETH && tokenIn == AKITA)){
+        } else if (token0 == AKITA && token1 == WETH){
             return BALANCERV2_AKITA_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == OHM) || (tokenOut == WETH && tokenIn == OHM) || (tokenIn == DAI && tokenOut == OHM) || (tokenOut == DAI && tokenIn == OHM)){
+        } else if ((token0 == OHM && token1 == WETH) || (token0 == OHM && token1 == DAI)){
             return BALANCERV2_OHM_DAI_WETH_POOLID;
-        } else if ((tokenIn == COW && tokenOut == GNO) || (tokenOut == COW && tokenIn == GNO)){
+        } else if (token0 == GNO && token1 == COW){
             return BALANCERV2_COW_GNO_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == COW) || (tokenOut == WETH && tokenIn == COW)){
+        } else if (token0 == WETH && token1 == COW){
             return BALANCERV2_COW_WETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == AURA) || (tokenOut == WETH && tokenIn == AURA)){
+        } else if (token0 == WETH && token1 == AURA){
             return BALANCERV2_AURA_WETH_POOLID;
-        } else if ((tokenIn == BALWETHBPT && tokenOut == AURABAL) || (tokenOut == BALWETHBPT && tokenIn == AURABAL)){
+        } else if (token0 == BALWETHBPT && token1 == AURABAL){
             return BALANCERV2_AURABAL_BALWETH_POOLID;
             // TODO CHANGE
-        } else if ((tokenIn == WETH && tokenOut == AURABAL) || (tokenOut == WETH && tokenIn == AURABAL)){
-            return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
-        } else if ((tokenIn == WETH && tokenOut == GRAVIAURA) || (tokenOut == WETH && tokenIn == GRAVIAURA)){
-            return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
+        } else if (token0 == AURABAL && token1 == WETH){
+            return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
+        } else if (token0 == GRAVIAURA && token1 == WETH){
+            return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
         } else{
             return BALANCERV2_NONEXIST_POOLID;
         }		

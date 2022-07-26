@@ -61,7 +61,7 @@ def test_gas_only_uniswap_v3(oneE18, weth, pricer):
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert tx.return_value[0] == 3 ## UNIV3  
   assert tx.return_value[1] > 0  
-  assert tx.gas_used <= 130000 ## 128409 in test simulation
+  assert tx.gas_used <= 150000 ## 146254 in test simulation
 
 def test_gas_only_uniswap_v3_with_weth(oneE18, wbtc, pricer):
   token = "0xf4d2888d29D722226FafA5d9B24F9164c092421E" # some swap (LOOKS-WETH-WBTC) only in Uniswap V3 via WETH in between as connector
@@ -72,7 +72,7 @@ def test_gas_only_uniswap_v3_with_weth(oneE18, wbtc, pricer):
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx.return_value[0] == 4 ## UNIV3WITHWETH  
   assert tx.return_value[1] > 0  
-  assert tx.gas_used <= 210000 ## 203586 in test simulation
+  assert tx.gas_used <= 230000 ## 227498 in test simulation
 
 def test_gas_almost_everything(oneE18, wbtc, weth, pricer):
   token = weth # some swap (WETH-WBTC) almost in every DEX, the most gas-consuming scenario

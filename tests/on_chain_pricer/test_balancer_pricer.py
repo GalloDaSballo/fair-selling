@@ -31,6 +31,7 @@ def test_get_balancer_price(oneE18, weth, usdc, pricer):
     
   ## minimum quote for ETH in USDC(1e6)
   p = 1 * 500 * 1000000  
+  
   quote = pricer.getBalancerPriceAnalytically(weth.address, sell_amount, usdc.address)
   assert quote >= p 
   
@@ -120,7 +121,7 @@ def test_balancer_not_supported_tokens(oneE18, tusd, usdc, pricer):
   ## tokenOut not in the given balancer pool
   with brownie.reverts("!outBAL"):
        supported = pricer.getBalancerQuoteWithinPoolAnalytcially(pricer.BALANCERV2_DAI_USDC_USDT_POOLID(), usdc.address, 1000 * 1000000, tusd.address)
-  
+
 def test_get_balancer_with_connector_no_second_pair(oneE18, balethbpt, badger, weth, pricer):  
   ## 1e18
   sell_amount = 1000 * oneE18
@@ -128,4 +129,20 @@ def test_get_balancer_with_connector_no_second_pair(oneE18, balethbpt, badger, w
   ## no swap path for BALETHBPT -> WETH -> BADGER in Balancer V2
   quoteInRangeAndFee = pricer.getBalancerPriceWithConnectorAnalytically(balethbpt.address, sell_amount, badger.address, weth.address)
   assert quoteInRangeAndFee == 0
+  
+def test_get_balancer_pools(weth, pricer):  
+  assert pricer.getBalancerV2Pool(pricer.GRAVIAURA(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID() ## bveaura
+  assert pricer.getBalancerV2Pool(pricer.AURA(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.COW(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.COW(), pricer.GNO()) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.OHM(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.AKITA(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.AKITA(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.rETH(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.SRM(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.WSTETH(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.BAL(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.GNO(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.FEI(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
+  assert pricer.getBalancerV2Pool(pricer.CREAM(), weth.address) != pricer.BALANCERV2_NONEXIST_POOLID()
   

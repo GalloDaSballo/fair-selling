@@ -54,6 +54,6 @@ def test_token_decimal18(oneE18, weth, token, count, pricer):
   sell_count = count
   sell_amount = sell_count * oneE18 ## 1e18
     
-  tx = pricer.findOptimalSwap(sell_token, weth.address, sell_amount)
-  assert tx.return_value[1] > 0  
+  quote = pricer.findOptimalSwap.call(sell_token, weth.address, sell_amount)
+  assert quote[1] > 0  
  
