@@ -269,23 +269,6 @@ contract OnChainPricingMainnet {
         // Use dummy magic number as a quick-easy substitute for liquidity (to avoid one SLOAD) since we have pool reserve check in it
         bool _basicCheck = _checkPoolLiquidityAndBalances(1, (_zeroForOne? _t0Balance : _t1Balance), amountIn);
         return _basicCheck? getUniV2AmountOutAnalytically(amountIn, (_zeroForOne? _t0Balance : _t1Balance), (_zeroForOne? _t1Balance : _t0Balance)) : 0;
-		
-        //address[] memory path = new address[](2);
-        //path[0] = address(tokenIn);
-        //path[1] = address(tokenOut);
-
-        //uint256 quote; //0
-
-
-        // TODO: Consider doing check before revert to avoid paying extra gas
-        // Specifically, test gas if we get revert vs if we check to avoid it
-        //try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
-        //    quote = amounts[amounts.length - 1]; // Last one is the outToken
-        //} catch (bytes memory) {
-            // We ignore as it means it's zero
-        //}
-
-        //return quote;
     }
 	
     /// @dev reference https://etherscan.io/address/0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F#code#L122
@@ -645,7 +628,7 @@ contract OnChainPricingMainnet {
     /// === UTILS === ///
 
     /// @dev Given a address input, return the bytes32 representation
-    // TODO: Figure out if abi.encode is better
+    // TODO: Figure out if abi.encode is better -> Benchmark on GasLab
     function convertToBytes32(address _input) public pure returns (bytes32){
         return bytes32(uint256(uint160(_input)) << 96);
     }

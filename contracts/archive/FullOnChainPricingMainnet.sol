@@ -209,8 +209,6 @@ contract FullOnChainPricingMainnet {
 
         uint256 quote; //0
 
-
-        // TODO: Consider doing check before revert to avoid paying extra gas
         // Specifically, test gas if we get revert vs if we check to avoid it
         try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
             quote = amounts[amounts.length - 1]; // Last one is the outToken
@@ -424,7 +422,6 @@ contract FullOnChainPricingMainnet {
             return BALANCERV2_AURA_WETH_POOLID;
         } else if ((tokenIn == BALWETHBPT && tokenOut == AURABAL) || (tokenOut == BALWETHBPT && tokenIn == AURABAL)){
             return BALANCERV2_AURABAL_BALWETH_POOLID;
-            // TODO CHANGE
         } else if ((tokenIn == WETH && tokenOut == AURABAL) || (tokenOut == WETH && tokenIn == AURABAL)){
             return BALANCERV2_AURABAL_GRAVIAURA_BALWETH_POOLID;
         } else if ((tokenIn == WETH && tokenOut == GRAVIAURA) || (tokenOut == WETH && tokenIn == GRAVIAURA)){
@@ -444,7 +441,6 @@ contract FullOnChainPricingMainnet {
     }
 	
     /// @return assembled curve pools and fees in required Quote struct for given pool
-    // TODO: Decide if we need fees, as it costs more gas to compute
     function _getCurveFees(address _pool) internal view returns (bytes32[] memory, uint256[] memory){	
         bytes32[] memory curvePools = new bytes32[](1);
         curvePools[0] = convertToBytes32(_pool);
@@ -456,7 +452,6 @@ contract FullOnChainPricingMainnet {
     /// === UTILS === ///
 
     /// @dev Given a address input, return the bytes32 representation
-    // TODO: Figure out if abi.encode is better
     function convertToBytes32(address _input) public pure returns (bytes32){
         return bytes32(uint256(uint160(_input)) << 96);
     }
