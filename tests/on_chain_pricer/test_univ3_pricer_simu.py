@@ -3,34 +3,6 @@ from brownie import *
 import pytest
 
 """
-    simulateUniV3Swap quote for token A swapped to token B directly: A - > B
-"""
-def test_simu_univ3_swap(oneE18, weth, usdc, pricer):  
-  ## 1e18
-  sell_count = 10
-  sell_amount = sell_count * oneE18
-    
-  ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
-  p = sell_count * 900 * 1000000  
-  quote = pricer.simulateUniV3Swap(usdc.address, sell_amount, weth.address, 500, False, "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
-  
-  assert quote >= p  
-
-"""
-    simulateUniV3Swap quote for token A swapped to token B directly: A - > B
-"""
-def test_simu_univ3_swap2(oneE18, weth, wbtc, pricer):  
-  ## 1e8
-  sell_count = 10
-  sell_amount = sell_count * 100000000
-    
-  ## minimum quote for BTC in ETH(1e18) ## Rip ETH price
-  p = sell_count * 14 * oneE18  
-  quote = pricer.simulateUniV3Swap(wbtc.address, sell_amount, weth.address, 500, True, "0x4585FE77225b41b697C938B018E2Ac67Ac5a20c0")
-  
-  assert quote >= p  
-
-"""
     sortUniV3Pools quote for stablecoin A swapped to stablecoin B which try for in-range swap before full-simulation
     https://info.uniswap.org/#/tokens/0x6b175474e89094c44da98b954eedeac495271d0f
 """
