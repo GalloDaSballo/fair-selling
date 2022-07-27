@@ -30,7 +30,7 @@ Covering >80% TVL on Mainnet.
 
 ## Example Usage
 
-NOTE: Because of Balancer and UniV3 (go bug their devs pls), the following functions are not view, you must `.call` them from offchain to avoid spending gas
+BREAKING CHANGE: V3 is back to `view` even for Balancer and UniV3 functions
 
 ### isPairSupported
 
@@ -45,7 +45,7 @@ NOTE: This is not proof of optimality
 
 In Brownie
 ```python
-quote = pricer.isPairSupported.call(t_in, t_out, amt_in) ## Add .call to avoid paying for the tx
+quote = pricer.isPairSupported(t_in, t_out, amt_in)
 ```
 
 ### findOptimalSwap
@@ -59,7 +59,7 @@ NOTE: While the function says optimal, this is not optimal, just best of the bun
 
 In Brownie
 ```python
-quote = pricer.findOptimalSwap.call(t_in, t_out, amt_in) ## Add .call to avoid paying for the tx
+quote = pricer.findOptimalSwap(t_in, t_out, amt_in)
 ```
 
 
@@ -67,3 +67,30 @@ quote = pricer.findOptimalSwap.call(t_in, t_out, amt_in) ## Add .call to avoid p
 
 Variation of Pricer with a slippage tollerance
 
+
+
+# Notable Tests
+
+## Benchmark specific AMM quotes
+TODO: Improve to just use the specific quote
+
+```
+brownie test tests/gas_benchmark/benchmark_pricer_gas.py --gas
+```
+
+## Benchmark coverage of top DeFi Tokens
+
+TODO: Add like 200 tokens
+TODO: Compare against Coingecko API or smth
+
+```
+brownie test tests/gas_benchmark/benchmark_token_coverage.py --gas
+```
+
+## Notable Test from V2
+
+Run V3 Pricer against V2, to confirm results are correct, but with gas savings
+
+```
+brownie test  tests/heuristic_equivalency/test_heuristic_equivalency.py
+```

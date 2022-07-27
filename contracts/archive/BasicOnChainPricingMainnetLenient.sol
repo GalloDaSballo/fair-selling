@@ -75,7 +75,7 @@ contract BasicOnChainPricingMainnetLenient {
         quotes[2] = Quote("sushi", sushiQuote);
 
 
-        /// TODO: Add Balancer and UniV3
+        /// NOTE: Lack of Balancer and UniV3
         
 
         // Because this is a generalized contract, it is best to just loop,
@@ -109,8 +109,6 @@ contract BasicOnChainPricingMainnetLenient {
 
         uint256 quote; //0
 
-
-        // TODO: Consider doing check before revert to avoid paying extra gas
         // Specifically, test gas if we get revert vs if we check to avoid it
         try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
             quote = amounts[amounts.length - 1]; // Last one is the outToken
@@ -120,10 +118,6 @@ contract BasicOnChainPricingMainnetLenient {
 
         return quote;
     }
-
-    // TODO: Consider adding a `bool` check for `isWeth` to skip the weth check (as it's computed above)
-    // TODO: Most importantly need to run some gas cost tests to ensure we keep at most at like 120k
-
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
     function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (uint256) {

@@ -56,7 +56,9 @@ def test_are_bribes_supported(pricer, token):
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
   
-  res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
+  res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
-
+  
+  quote = pricer.findOptimalSwap.call(token, WETH, AMOUNT)
+  assert quote[1] > 0
 

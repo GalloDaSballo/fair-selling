@@ -1,6 +1,5 @@
 import brownie
 from brownie import *
-from scripts.send_order import get_cowswap_order
 
 """
     swapAuraToBveAuraAndEmit
