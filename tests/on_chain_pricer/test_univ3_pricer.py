@@ -12,6 +12,8 @@ def test_get_univ3_price_cow(oneE18, weth, usdc_whale, pricer):
   sell_amount = sell_count * oneE18
     
   ## minimum quote for COW in ETH(1e18)
+  quoteInV2 = pricer.getUniPrice(pricer.UNIV2_ROUTER(), weth.address, token, sell_amount)
+  assert quoteInV2 == 0
   p = sell_count * 0.00005 * oneE18   
   quote = pricer.simulateUniV3Swap(weth.address, sell_amount, token, 10000, False, "0xFCfDFC98062d13a11cec48c44E4613eB26a34293")
   assert quote >= p 
@@ -62,7 +64,9 @@ def test_get_univ3_price_with_connector(oneE18, wbtc, usdc, weth, dai, pricer):
   sell_amount = 100 * 100000000
   
   ## minimum quote for WBTC in USDC(1e6)
-  p = 100 * 15000 * 1000000  
+  p = 100 * 15000 * 1000000
+  assert pricer.sortUniV3Pools(wbtc.address, sell_amount, usdc.address)[0] >= p
+  
   quoteWithConnector = pricer.getUniV3PriceWithConnector(wbtc.address, sell_amount, usdc.address, weth.address)
 
   ## min price 
@@ -71,3 +75,4 @@ def test_get_univ3_price_with_connector(oneE18, wbtc, usdc, weth, dai, pricer):
   ## test case for stablecoin DAI -> USDC
   daiQuoteWithConnector = pricer.getUniV3PriceWithConnector(dai.address, 10000 * oneE18, usdc.address, weth.address)
   assert daiQuoteWithConnector >= 10000 * 0.99 * 1000000
+ 

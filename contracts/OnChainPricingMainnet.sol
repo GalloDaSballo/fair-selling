@@ -513,6 +513,8 @@ contract OnChainPricingMainnet {
             require(_inTokenIdx < tokens.length, '!inBAL');
             uint256 _outTokenIdx = _findTokenInBalancePool(tokenOut, tokens);
             require(_outTokenIdx < tokens.length, '!outBAL');
+			 
+            if(balances[_inTokenIdx] <= amountIn) return 0;
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
             try IBalancerV2StablePool(_pool).getAmplificationParameter() returns (uint256 currentAmp, bool isUpdating, uint256 precision) {

@@ -80,7 +80,11 @@ def test_only_sushi_support(oneE18, xsushi, usdc, pricer):
 def test_only_curve_support(oneE18, usdc, pricer):  
   ## 1e18
   sell_amount = 1000 * oneE18
-
+  
+  ## USDI
   supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
   assert supported == True
+  quoteTx = pricer.findOptimalSwap("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
+  assert quoteTx.return_value[1] > 0
+  assert quoteTx.return_value[0] == 0
  
