@@ -66,8 +66,7 @@ contract OnChainPricingMainnet {
     address public constant UNIV3_QUOTER = 0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6;
     bytes32 public constant UNIV3_POOL_INIT_CODE_HASH = 0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54;
     address public constant UNIV3_FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
-    uint24[4] univ3_fees = [uint24(100), 500, 3000, 10000]; 
-	
+
     // BalancerV2 Vault
     address public constant BALANCERV2_VAULT = 0xBA12222222228d8Ba445958a75a0704d566BF2C8;
     bytes32 public constant BALANCERV2_NONEXIST_POOLID = "BALANCER-V2-NON-EXIST-POOLID";
@@ -114,11 +113,28 @@ contract OnChainPricingMainnet {
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
     uint256 public constant CURVE_FEE_SCALE = 100000;
     address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-	
+    
+    // TODO: Consider making immutable
     /// @dev helper library to simulate Uniswap V3 swap
     address public uniV3Simulator;
     /// @dev helper library to simulate Balancer V2 swap
     address public balancerV2Simulator;
+
+
+    /// UniV3, replaces an array
+    uint256 constant univ3_fees_length = 4;
+    function univ3_fees(uint256 i) internal pure returns (uint24) {
+        if(i == 0){
+            return uint24(100);
+        } else if (i == 1) {
+            return uint24(500);
+        } else if (i == 2) {
+            return uint24(3000);
+        } else if (i == 3) {
+            return uint24(10000);
+        }
+    }
+
 	
     /// === TEST-ONLY ===
     constructor(address _uniV3Simulator, address _balancerV2Simulator){
@@ -126,15 +142,15 @@ contract OnChainPricingMainnet {
         balancerV2Simulator = _balancerV2Simulator;
     }
 	
-    function setUniV3Simulator(address _uniV3Simulator) external {
-        require(_uniV3Simulator != address(0));//TODO permission
-        uniV3Simulator = _uniV3Simulator;
-    }
+    // function setUniV3Simulator(address _uniV3Simulator) external {
+    //     require(_uniV3Simulator != address(0));//TODO permission
+    //     uniV3Simulator = _uniV3Simulator;
+    // }
 	
-    function setBalancerV2Simulator(address _balancerV2Simulator) external {
-        require(_balancerV2Simulator != address(0));//TODO permission
-        balancerV2Simulator = _balancerV2Simulator;
-    }
+    // function setBalancerV2Simulator(address _balancerV2Simulator) external {
+    //     require(_balancerV2Simulator != address(0));//TODO permission
+    //     balancerV2Simulator = _balancerV2Simulator;
+    // }
     /// === END TEST-ONLY ===
 
     struct Quote {
@@ -253,23 +269,6 @@ contract OnChainPricingMainnet {
         // Use dummy magic number as a quick-easy substitute for liquidity (to avoid one SLOAD) since we have pool reserve check in it
         bool _basicCheck = _checkPoolLiquidityAndBalances(1, (_zeroForOne? _t0Balance : _t1Balance), amountIn);
         return _basicCheck? getUniV2AmountOutAnalytically(amountIn, (_zeroForOne? _t0Balance : _t1Balance), (_zeroForOne? _t1Balance : _t0Balance)) : 0;
-		
-        //address[] memory path = new address[](2);
-        //path[0] = address(tokenIn);
-        //path[1] = address(tokenOut);
-
-        //uint256 quote; //0
-
-
-        // TODO: Consider doing check before revert to avoid paying extra gas
-        // Specifically, test gas if we get revert vs if we check to avoid it
-        //try IUniswapRouterV2(router).getAmountsOut(amountIn, path) returns (uint256[] memory amounts) {
-        //    quote = amounts[amounts.length - 1]; // Last one is the outToken
-        //} catch (bytes memory) {
-            // We ignore as it means it's zero
-        //}
-
-        //return quote;
     }
 	
     /// @dev reference https://etherscan.io/address/0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F#code#L122
@@ -324,10 +323,10 @@ contract OnChainPricingMainnet {
     function _simLoopAllUniV3Pools(address token0, address token1, uint256 amountIn, bool token0Price) internal view returns (uint256, uint24) {		
         uint256 _maxQuote;
         uint24 _maxQuoteFee;
-        uint256 feeTypes = univ3_fees.length;		
+        uint256 feeTypes = univ3_fees_length;		
 	
         for (uint256 i = 0; i < feeTypes;){
-            uint24 _fee = univ3_fees[i];
+            uint24 _fee = univ3_fees(i);
                 
             {			 
                 // TODO: Partial rewrite to perform initial comparison against all simulations based on "liquidity in range"
@@ -350,12 +349,12 @@ contract OnChainPricingMainnet {
 	
     /// @dev tell if there exists some Uniswap V3 pool for given token pair
     function checkUniV3PoolsExistence(address tokenIn, address tokenOut) public view returns (bool){
-        uint256 feeTypes = univ3_fees.length;	
+        uint256 feeTypes = univ3_fees_length;	
         (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
         bool _exist;
         {    
           for (uint256 i = 0; i < feeTypes;){
-             address _pool = _getUniV3PoolAddress(token0, token1, univ3_fees[i]);
+             address _pool = _getUniV3PoolAddress(token0, token1, univ3_fees(i));
              if (_pool.isContract()) {
                  _exist = true;
                  break;
@@ -629,7 +628,7 @@ contract OnChainPricingMainnet {
     /// === UTILS === ///
 
     /// @dev Given a address input, return the bytes32 representation
-    // TODO: Figure out if abi.encode is better
+    // TODO: Figure out if abi.encode is better -> Benchmark on GasLab
     function convertToBytes32(address _input) public pure returns (bytes32){
         return bytes32(uint256(uint160(_input)) << 96);
     }

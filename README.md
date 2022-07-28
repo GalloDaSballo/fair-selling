@@ -67,3 +67,30 @@ quote = pricer.findOptimalSwap(t_in, t_out, amt_in)
 
 Variation of Pricer with a slippage tollerance
 
+
+
+# Notable Tests
+
+## Benchmark specific AMM quotes
+TODO: Improve to just use the specific quote
+
+```
+brownie test tests/gas_benchmark/benchmark_pricer_gas.py --gas
+```
+
+## Benchmark coverage of top DeFi Tokens
+
+TODO: Add like 200 tokens
+TODO: Compare against Coingecko API or smth
+
+```
+brownie test tests/gas_benchmark/benchmark_token_coverage.py --gas
+```
+
+## Notable Test from V2
+
+Run V3 Pricer against V2, to confirm results are correct, but with gas savings
+
+```
+brownie test  tests/heuristic_equivalency/test_heuristic_equivalency.py
+```
