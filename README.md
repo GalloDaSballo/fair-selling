@@ -1,12 +1,24 @@
 # Fair Selling
 
-A BadgerDAO sponsored repo of Open Source Contracts for:
+A [BadgerDAO](https://app.badger.com/) sponsored repo of Open Source Contracts for:
 - Integrating Smart Contracts with Cowswap
 - Non-Custodial handling of tokens via BribesProcessors
 - Calculating onChain Prices
 - Executing the best onChain Swap
 
-## Release V0.3 - Pricer - BribesProcessor - CowswapSeller
+## Why bother
+
+We understand that we cannot prove a optimal price because at any time a new source of liquidity may be available and the contract cannot adapt.
+
+However we believe that given a set of constraints (available Dexes, handpicked), we can efficiently compute the best trade available to us
+
+In exploring this issue we aim to:
+- Find the most gas-efficient way to get the best executable price (currently 120 /150k per quote, from 1.6MLN)
+- Finding the most reliable price we can, to determine if an offer is fair or unfair (Cowswap integration)
+- Can we create a "trustless swap" that is provably not frontrun nor manipulated?
+- How would such a "self-defending" contract act and how would it be able to defend itself, get the best quote, and be certain of it (with statistical certainty)
+
+## Current Release V0.3 - Pricer - BribesProcessor - CowswapSeller
 
 # Notable Contracts
 ## CowswapSeller
@@ -40,10 +52,6 @@ Given a tokenIn, tokenOut and AmountIn, returns a Quote from the most popular de
 - Sushi
 
 Covering >80% TVL on Mainnet. (Prob even more)
-
-# Ar
-
-
 
 ## Example Usage
 
@@ -87,6 +95,15 @@ Variation of Pricer with a slippage tollerance
 
 
 # Notable Tests
+
+## Proof that the math is accurate with gas savings
+
+These tests compare the PricerV3 (150k per quote) against V2 (1.6MLN per quote)
+
+```
+brownie test tests/heuristic_equivalency/test_heuristic_equivalency.py
+
+```
 
 ## Benchmark specific AMM quotes
 TODO: Improve to just use the specific quote
