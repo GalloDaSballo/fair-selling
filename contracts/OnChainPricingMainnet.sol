@@ -183,11 +183,15 @@ contract OnChainPricingMainnet {
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
+    /// @param tokenIn - The token you want to sell
+    /// @param tokenOut - The token you want to buy
+    /// @param amountIn - The amount of token you want to sell
     function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
     /// @dev View function for testing the routing of the strategy
+    /// See {findOptimalSwap}
     function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
         uint256 length = wethInvolved? 5 : 7; // Add length you need
@@ -247,6 +251,7 @@ contract OnChainPricingMainnet {
 	
         // check pool existence first before quote against it
         bool _univ2 = (router == UNIV2_ROUTER);
+        
         (address _pool, address _token0, address _token1) = pairForUniV2((_univ2? UNIV2_FACTORY : SUSHI_FACTORY), tokenIn, tokenOut, (_univ2? UNIV2_POOL_INITCODE : SUSHI_POOL_INITCODE));
         if (!_pool.isContract()){
             return 0;
