@@ -1,4 +1,3 @@
-from brownie import chain
 from rich.console import Console
 
 console = Console()
@@ -19,13 +18,11 @@ def test_pricing_equivalency_uniswap_v2(weth, pricer, pricer_legacy):
   ## 1e18
   sell_count = 100000000
   sell_amount = sell_count * 1000000000 ## 1e9
-      
-  chain.snapshot() # To price under same chain conditions (just because)
+
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert tx.return_value[0] == 1 ## UNIV2  
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, weth.address, sell_amount)
   assert tx2.return_value[0] == 1 ## UNIV2  
   quote_legacy = tx2.return_value[1]
@@ -39,12 +36,10 @@ def test_pricing_equivalency_uniswap_v2_sushi(oneE18, weth, pricer, pricer_legac
   sell_count = 5000
   sell_amount = sell_count * oneE18 ## 1e18
 
-  chain.snapshot() # To price under same chain conditions (just because)
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert (tx.return_value[0] == 1 or tx.return_value[0] == 2) ## UNIV2 or SUSHI
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, weth.address, sell_amount)
   assert (tx2.return_value[0] == 1 or tx2.return_value[0] == 2) ## UNIV2 or SUSHI
   quote_legacy = tx2.return_value[1]
@@ -58,12 +53,10 @@ def test_pricing_equivalency_balancer_v2(oneE18, weth, aura, pricer, pricer_lega
   sell_count = 2000
   sell_amount = sell_count * oneE18 ## 1e18
   
-  chain.snapshot() # To price under same chain conditions (just because)
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert tx.return_value[0] == 5 ## BALANCER 
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, weth.address, sell_amount)
   assert tx2.return_value[0] == 5 ## BALANCER  
   quote_legacy = tx2.return_value[1]
@@ -76,13 +69,11 @@ def test_pricing_equivalency_balancer_v2_with_weth(oneE18, wbtc, aura, pricer, p
   ## 1e18
   sell_count = 2000
   sell_amount = sell_count * oneE18 ## 1e18
-    
-  chain.snapshot() # To price under same chain conditions (just because)
+
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx.return_value[0] == 6 ## BALANCERWITHWETH  
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx2.return_value[0] == 6 ## BALANCERWITHWETH    
   quote_legacy = tx2.return_value[1]
@@ -95,13 +86,11 @@ def test_pricing_equivalency_uniswap_v3(oneE18, weth, pricer, pricer_legacy):
   ## 1e18
   sell_count = 600000
   sell_amount = sell_count * oneE18 ## 1e18
-    
-  chain.snapshot() # To price under same chain conditions (just because)
+  
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
   assert tx.return_value[0] == 3 ## UNIV3  
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, weth.address, sell_amount)
   assert tx2.return_value[0] == 3 ## UNIV3    
   quote_legacy = tx2.return_value[1]
@@ -114,13 +103,11 @@ def test_pricing_equivalency_uniswap_v3_with_weth(oneE18, wbtc, pricer, pricer_l
   ## 1e18
   sell_count = 600000
   sell_amount = sell_count * oneE18 ## 1e18
-    
-  chain.snapshot() # To price under same chain conditions (just because)
+
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx.return_value[0] == 4 ## UNIV3WITHWETH  
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, wbtc.address, sell_amount)
   assert tx2.return_value[0] == 4 ## UNIV3WITHWETH 
   quote_legacy = tx2.return_value[1]
@@ -133,13 +120,11 @@ def test_pricing_equivalency_almost_everything(oneE18, wbtc, weth, pricer, price
   ## 1e18
   sell_count = 10
   sell_amount = sell_count * oneE18 ## 1e18
-    
-  chain.snapshot() # To price under same chain conditions (just because)
+  
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
   assert (tx.return_value[0] <= 3 or tx.return_value[0] == 5) ## CURVE or UNIV2 or SUSHI or UNIV3 or BALANCER  
   quote = tx.return_value[1]
 
-  chain.revert()
   tx2 = pricer_legacy.findOptimalSwap(token, wbtc.address, sell_amount)
   assert (tx2.return_value[0] <= 3 or tx2.return_value[0] == 5) ## CURVE or UNIV2 or SUSHI or UNIV3 or BALANCER  
   quote_legacy = tx2.return_value[1]
