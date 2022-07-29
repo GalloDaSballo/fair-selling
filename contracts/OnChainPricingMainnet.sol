@@ -52,11 +52,11 @@ contract OnChainPricingMainnet {
     /// == Uni V2 Like Routers || These revert on non-existent pair == //
     // UniV2
     address public constant UNIV2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D; // Spookyswap
-    bytes public constant UNIV2_POOL_INITCODE = hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f';
+    bytes public constant UNIV2_POOL_INITCODE = hex"96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f";
     address public constant UNIV2_FACTORY = 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
     // Sushi
     address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
-    bytes public constant SUSHI_POOL_INITCODE = hex'e18a34eb0e04b04f7a0ac29a6e80748dca96319b42c54d679cb821dca90c6303';
+    bytes public constant SUSHI_POOL_INITCODE = hex"e18a34eb0e04b04f7a0ac29a6e80748dca96319b42c54d679cb821dca90c6303";
     address public constant SUSHI_FACTORY = 0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac;
 
     // Curve / Doesn't revert on failure
@@ -275,7 +275,7 @@ contract OnChainPricingMainnet {
     function pairForUniV2(address factory, address tokenA, address tokenB, bytes memory _initCode) public pure returns (address, address, address) {
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);		
         address pair = getAddressFromBytes32Lsb(keccak256(abi.encodePacked(
-                hex'ff',
+                hex"ff",
                 factory,
                 keccak256(abi.encodePacked(token0, token1)),
                 _initCode // init code hash
@@ -503,9 +503,9 @@ contract OnChainPricingMainnet {
             (address[] memory tokens, uint256[] memory balances, ) = IBalancerV2Vault(BALANCERV2_VAULT).getPoolTokens(poolId);
 			
             uint256 _inTokenIdx = _findTokenInBalancePool(tokenIn, tokens);
-            require(_inTokenIdx < tokens.length, '!inBAL');
+            require(_inTokenIdx < tokens.length, "!inBAL");
             uint256 _outTokenIdx = _findTokenInBalancePool(tokenOut, tokens);
-            require(_outTokenIdx < tokens.length, '!outBAL');
+            require(_outTokenIdx < tokens.length, "!outBAL");
 			 
             if(balances[_inTokenIdx] <= amountIn) return 0;
 		
@@ -520,7 +520,7 @@ contract OnChainPricingMainnet {
                 // weighted pool math
                 {
                    uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
-                   require(_weights.length == tokens.length, '!lenBAL');
+                   require(_weights.length == tokens.length, "!lenBAL");
                    ExactInQueryParam memory _query = ExactInQueryParam(tokenIn, tokenOut, balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn, IBalancerV2WeightedPool(_pool).getSwapFeePercentage());
                    _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
                 }

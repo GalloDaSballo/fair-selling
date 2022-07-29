@@ -52,12 +52,12 @@ contract BalancerSwapSimulator {
         uint256 _scalingFactorIn = _computeScalingFactorWeightedPool(_query.tokenIn);
         _query.amountIn = BalancerMath.mul(_query.amountIn, _scalingFactorIn);
         _query.balanceIn = BalancerMath.mul(_query.balanceIn, _scalingFactorIn);
-        require(_query.balanceIn > _query.amountIn, '!amtIn');
+        require(_query.balanceIn > _query.amountIn, "!amtIn");
 		
         uint256 _scalingFactorOut = _computeScalingFactorWeightedPool(_query.tokenOut);
         _query.balanceOut = BalancerMath.mul(_query.balanceOut, _scalingFactorOut);
 		
-        require(_query.amountIn <= BalancerFixedPoint.mulDown(_query.balanceIn, _MAX_IN_RATIO), '!maxIn');
+        require(_query.amountIn <= BalancerFixedPoint.mulDown(_query.balanceIn, _MAX_IN_RATIO), "!maxIn");
 		
         uint256 denominator = BalancerFixedPoint.add(_query.balanceIn, _query.amountIn);
         uint256 base = BalancerFixedPoint.divUp(_query.balanceIn, denominator);
