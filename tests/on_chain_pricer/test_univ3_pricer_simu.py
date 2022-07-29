@@ -3,34 +3,6 @@ from brownie import *
 import pytest
 
 """
-    simulateUniV3Swap quote for token A swapped to token B directly: A - > B
-"""
-def test_simu_univ3_swap(oneE18, weth, usdc, pricer):  
-  ## 1e18
-  sell_count = 10
-  sell_amount = sell_count * oneE18
-    
-  ## minimum quote for ETH in USDC(1e6) ## Rip ETH price
-  p = sell_count * 900 * 1000000  
-  quote = pricer.simulateUniV3Swap(usdc.address, sell_amount, weth.address, 500, False, "0x88e6a0c2ddd26feeb64f039a2c41296fcb3f5640")
-  
-  assert quote >= p  
-
-"""
-    simulateUniV3Swap quote for token A swapped to token B directly: A - > B
-"""
-def test_simu_univ3_swap2(oneE18, weth, wbtc, pricer):  
-  ## 1e8
-  sell_count = 10
-  sell_amount = sell_count * 100000000
-    
-  ## minimum quote for BTC in ETH(1e18) ## Rip ETH price
-  p = sell_count * 14 * oneE18  
-  quote = pricer.simulateUniV3Swap(wbtc.address, sell_amount, weth.address, 500, True, "0x4585FE77225b41b697C938B018E2Ac67Ac5a20c0")
-  
-  assert quote >= p  
-
-"""
     sortUniV3Pools quote for stablecoin A swapped to stablecoin B which try for in-range swap before full-simulation
     https://info.uniswap.org/#/tokens/0x6b175474e89094c44da98b954eedeac495271d0f
 """
@@ -58,6 +30,9 @@ def test_simu_univ3_swap_sort_pools_usdt(oneE18, usdt, weth, pricer):
   assert quoteInRangeAndFee[0] >= p 
   assert quoteInRangeAndFee[1] == 500 ## fee-0.05% pool 
   
+  quoteSETH2 = pricer.sortUniV3Pools(weth.address, sell_amount, "0xFe2e637202056d30016725477c5da089Ab0A043A")
+  assert quoteSETH2[0] >= 10 * 0.999 * oneE18 
+  
 def test_simu_univ3_swap_usdt_usdc(oneE18, usdt, usdc, pricer):  
   ## 1e18
   sell_amount = 10000 * 1000000
@@ -81,6 +56,9 @@ def test_simu_univ3_swap_tusd_usdc(oneE18, tusd, usdc, pricer):
   ## min price
   assert quoteInRangeAndFee[0] >= p 
   assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool
+  
+  quoteUSDM = pricer.sortUniV3Pools(usdc.address, sell_amount, "0xbbAec992fc2d637151dAF40451f160bF85f3C8C1")
+  assert quoteUSDM[0] >= 10000 * 0.999 * 1000000
   
 def test_get_univ3_with_connector_no_second_pair(oneE18, balethbpt, usdc, weth, pricer):  
   ## 1e18
@@ -108,7 +86,15 @@ def test_only_sushi_support(oneE18, xsushi, usdc, pricer):
 def test_only_curve_support(oneE18, usdc, pricer):  
   ## 1e18
   sell_amount = 1000 * oneE18
-
+  
+  ## USDI
   supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
   assert supported == True
+  quoteTx = pricer.findOptimalSwap("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
+  assert quoteTx.return_value[1] > 0
+  assert quoteTx.return_value[0] == 0
+  
+  ## not supported yet
+  isBadgerAuraSupported = pricer.isPairSupported(pricer.BADGER(), pricer.AURA(), sell_amount * 100)
+  assert isBadgerAuraSupported == False
  

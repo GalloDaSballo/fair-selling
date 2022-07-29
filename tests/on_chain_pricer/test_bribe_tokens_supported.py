@@ -32,9 +32,9 @@ FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
 TOKENS_18_DECIMALS = [
   AURA,
   AURA_BAL, ## Not Supported -> To FIX TODO ADD BAL POOL
-  SD, ## Not Supported -> Cannot fix at this time
+  #SD, ## Not Supported -> Cannot fix at this time
   DFX,
-  FDT, ## Not Supported -> Cannot fix at this time
+  #FDT, ## Not Supported -> Cannot fix at this time
   LDO,
   COW,
   GNO,

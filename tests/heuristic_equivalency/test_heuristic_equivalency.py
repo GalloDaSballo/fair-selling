@@ -14,7 +14,6 @@ console = Console()
 """
 
 ### Test findOptimalSwap Equivalencies for different cases
-
 def test_pricing_equivalency_uniswap_v2(weth, pricer, pricer_legacy):
   token = "0xBC7250C8c3eCA1DfC1728620aF835FCa489bFdf3" # some swap (GM-WETH) only in Uniswap V2  
   ## 1e18
@@ -126,7 +125,7 @@ def test_pricing_equivalency_uniswap_v3_with_weth(oneE18, wbtc, pricer, pricer_l
   assert tx2.return_value[0] == 4 ## UNIV3WITHWETH 
   quote_legacy = tx2.return_value[1]
 
-  assert quote >= quote_legacy # Optimized quote must be the same or better
+  assert quote >= quote_legacy # Optimized quote must be the same or better, note the fixed pair in new version of univ3 pricer might cause some nuance there
   assert tx.gas_used < tx2.gas_used
 
 def test_pricing_equivalency_almost_everything(oneE18, wbtc, weth, pricer, pricer_legacy):
@@ -145,7 +144,8 @@ def test_pricing_equivalency_almost_everything(oneE18, wbtc, weth, pricer, price
   assert (tx2.return_value[0] <= 3 or tx2.return_value[0] == 5) ## CURVE or UNIV2 or SUSHI or UNIV3 or BALANCER  
   quote_legacy = tx2.return_value[1]
 
-  assert quote >= quote_legacy # Optimized quote must be the same or better
+  assert tx2.return_value[0] == tx.return_value[0]
+  assert quote >= quote_legacy # Optimized quote must be the same or better, note the fixed pair in new version of univ3 pricer might cause some nuance there
   assert tx.gas_used < tx2.gas_used
 
 
