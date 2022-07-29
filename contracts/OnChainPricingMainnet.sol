@@ -131,9 +131,9 @@ contract OnChainPricingMainnet {
             return uint24(500);
         } else if (i == 2) {
             return uint24(3000);
-        } else if (i == 3) {
-            return uint24(10000);
-        }
+        } 
+        // else if (i == 3) {
+        return uint24(10000);
     }
 
     constructor(address _uniV3Simulator, address _balancerV2Simulator){
