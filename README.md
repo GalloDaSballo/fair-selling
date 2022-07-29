@@ -128,3 +128,14 @@ Run V3 Pricer against V2, to confirm results are correct, but with gas savings
 ```
 brownie test  tests/heuristic_equivalency/test_heuristic_equivalency.py
 ```
+
+
+# Deployments
+
+WARNING: This list is not maintained and may be out of date or incorrect. DYOR.
+
+`bveCVX Bribes Processor`: https://etherscan.io/address/0xb2bf1d48f2c2132913278672e6924efda3385de2
+
+`bveAURA Bribes Processor`: https://etherscan.io/address/0x0b6198b324e12a002b60162f8a130d6aedabd04c
+
+Pricers can be found by checking `processor.pricer()`
