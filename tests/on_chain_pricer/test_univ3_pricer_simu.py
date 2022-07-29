@@ -30,6 +30,9 @@ def test_simu_univ3_swap_sort_pools_usdt(oneE18, usdt, weth, pricer):
   assert quoteInRangeAndFee[0] >= p 
   assert quoteInRangeAndFee[1] == 500 ## fee-0.05% pool 
   
+  quoteSETH2 = pricer.sortUniV3Pools(weth.address, sell_amount, "0xFe2e637202056d30016725477c5da089Ab0A043A")
+  assert quoteSETH2[0] >= 10 * 0.999 * oneE18 
+  
 def test_simu_univ3_swap_usdt_usdc(oneE18, usdt, usdc, pricer):  
   ## 1e18
   sell_amount = 10000 * 1000000
@@ -53,6 +56,9 @@ def test_simu_univ3_swap_tusd_usdc(oneE18, tusd, usdc, pricer):
   ## min price
   assert quoteInRangeAndFee[0] >= p 
   assert quoteInRangeAndFee[1] == 100 ## fee-0.01% pool
+  
+  quoteUSDM = pricer.sortUniV3Pools(usdc.address, sell_amount, "0xbbAec992fc2d637151dAF40451f160bF85f3C8C1")
+  assert quoteUSDM[0] >= 10000 * 0.999 * 1000000
   
 def test_get_univ3_with_connector_no_second_pair(oneE18, balethbpt, usdc, weth, pricer):  
   ## 1e18
@@ -87,4 +93,8 @@ def test_only_curve_support(oneE18, usdc, pricer):
   quoteTx = pricer.findOptimalSwap("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
   assert quoteTx.return_value[1] > 0
   assert quoteTx.return_value[0] == 0
+  
+  ## not supported yet
+  isBadgerAuraSupported = pricer.isPairSupported(pricer.BADGER(), pricer.AURA(), sell_amount * 100)
+  assert isBadgerAuraSupported == False
  

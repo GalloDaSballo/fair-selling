@@ -129,29 +129,33 @@ def test_get_balancer_with_connector_no_second_pair(oneE18, balethbpt, badger, w
   ## 1e18
   sell_amount = 1000 * oneE18
 
-  ## no swap path for BALETHBPT -> WETH -> BADGER in Balancer V2
+  ## no swap path for WETH -> BADGER in Balancer V2
   quoteNoPool = pricer.getBalancerPriceAnalytically(weth.address, sell_amount, badger.address)
   assert quoteNoPool == 0
-  quoteInRangeAndFee = pricer.getBalancerPriceWithConnectorAnalytically(balethbpt.address, sell_amount, badger.address, weth.address)
-  assert quoteInRangeAndFee == 0
-  quoteInRangeAndFee2 = pricer.getBalancerPriceWithConnectorAnalytically(badger.address, sell_amount, "0x2a54ba2964c8cd459dc568853f79813a60761b58", weth.address)
-  assert quoteInRangeAndFee2 == 0
+  ## no swap path for BALETHBPT -> WETH -> BADGER in Balancer V2
+  quoteBadger = pricer.getBalancerPriceWithConnectorAnalytically(balethbpt.address, sell_amount, badger.address, weth.address)
+  assert quoteBadger == 0
+  ## no swap path for BADGER -> WBTC -> USDI in Balancer V2
+  quoteUSDI = pricer.getBalancerPriceWithConnectorAnalytically(badger.address, sell_amount, "0x2a54ba2964c8cd459dc568853f79813a60761b58", pricer.WBTC())
+  assert quoteUSDI == 0
   
-def test_get_balancer_pools(weth, usdc, pricer):  
+def test_get_balancer_pools(weth, usdc, wbtc, pricer):  
   ## bveaura
   nonExistPool = pricer.BALANCERV2_NONEXIST_POOLID()
-  assert pricer.getBalancerV2Pool(pricer.GRAVIAURA(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.GRAVIAURA(), usdc.address) == nonExistPool
-  assert pricer.getBalancerV2Pool(pricer.AURA(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.AURA(), usdc.address) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.GRAVIAURA(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.GRAVIAURA(), pricer.USDT()) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.AURA(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.AURA(), pricer.USDT()) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.AURABAL(), pricer.USDT()) == nonExistPool and pricer.getBalancerV2Pool(pricer.AURABAL(), wbtc.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.COW(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.COW(), usdc.address) == nonExistPool
-  assert pricer.getBalancerV2Pool(pricer.COW(), pricer.GNO()) != nonExistPool 
+  assert pricer.getBalancerV2Pool(pricer.COW(), pricer.GNO()) != nonExistPool and pricer.getBalancerV2Pool(pricer.USDT(), weth.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.OHM(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.OHM(), usdc.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.AKITA(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.AKITA(), usdc.address) == nonExistPool
-  assert pricer.getBalancerV2Pool(pricer.rETH(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.rETH(), usdc.address) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.rETH(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.rETH(), pricer.USDT()) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.SRM(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.SRM(), usdc.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.WSTETH(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.WSTETH(), usdc.address) == nonExistPool
-  assert pricer.getBalancerV2Pool(pricer.BAL(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.BAL(), usdc.address) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.BAL(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.BAL(), pricer.USDT()) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.GNO(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.GNO(), usdc.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.FEI(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.FEI(), usdc.address) == nonExistPool
   assert pricer.getBalancerV2Pool(pricer.CREAM(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.CREAM(), usdc.address) == nonExistPool
-  assert pricer.getBalancerV2Pool(pricer.WBTC(), pricer.BADGER()) != nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.WBTC(), pricer.BADGER()) != nonExistPool and pricer.getBalancerV2Pool(pricer.WBTC(), usdc.address) == nonExistPool
+  assert pricer.getBalancerV2Pool(pricer.LDO(), weth.address) != nonExistPool and pricer.getBalancerV2Pool(pricer.LDO(), usdc.address) == nonExistPool and pricer.getBalancerV2Pool(pricer.LDO(), wbtc.address) == nonExistPool
   
