@@ -5,7 +5,12 @@ from brownie import (
   interface,
   UniV3SwapSimulator,
   BalancerSwapSimulator,
+  OnChainPricingMainnet,
+  CowSwapDemoSeller,
+  VotiumBribesProcessor,
+  AuraBribesProcessor,
   OnChainPricingMainnetLenient,
+  FullOnChainPricingMainnet,
   OnChainSwapMainnet
 )
 import eth_abi
