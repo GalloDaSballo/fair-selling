@@ -180,6 +180,8 @@ contract OnChainPricingMainnet {
         if (curveQuote > 0){
             return true;
         }
+
+        return false;
     }
 
     /// @dev External function, virtual so you can override, see Lenient Version
