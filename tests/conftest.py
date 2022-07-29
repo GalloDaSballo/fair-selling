@@ -1,5 +1,13 @@
 from time import time
 from brownie import *
+from brownie import (
+  accounts,
+  interface,
+  UniV3SwapSimulator,
+  BalancerSwapSimulator,
+  OnChainPricingMainnetLenient,
+  OnChainSwapMainnet
+)
 import eth_abi
 from rich.console import Console
 import pytest
@@ -40,35 +48,35 @@ WBTC_WHALE = "0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
   
 @pytest.fixture
 def swapexecutor():
-  return OnChainSwapMainnet.deploy({"from": a[0]})
+  return OnChainSwapMainnet.deploy({"from": accounts[0]})
   
 @pytest.fixture
 def pricer():
-  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
-  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
-  return OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": accounts[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": accounts[0]})
+  return OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": accounts[0]})
 
 @pytest.fixture
 def pricer_legacy():
-  return FullOnChainPricingMainnet.deploy({"from": a[0]})
+  return FullOnChainPricingMainnet.deploy({"from": accounts[0]})
 
 @pytest.fixture
 def lenient_contract():
   ## NOTE: We have 5% slippage on this one
-  univ3simulator = UniV3SwapSimulator.deploy({"from": a[0]})
-  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": a[0]})
-  c = OnChainPricingMainnetLenient.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": a[0]})
+  univ3simulator = UniV3SwapSimulator.deploy({"from": accounts[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": accounts[0]})
+  c = OnChainPricingMainnetLenient.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": accounts[0]})
   c.setSlippage(499, {"from": accounts.at(c.TECH_OPS(), force=True)})
 
   return c
 
 @pytest.fixture
 def seller(lenient_contract):
-  return CowSwapDemoSeller.deploy(lenient_contract, {"from": a[0]})
+  return CowSwapDemoSeller.deploy(lenient_contract, {"from": accounts[0]})
 
 @pytest.fixture
 def processor(lenient_contract):
-  return VotiumBribesProcessor.deploy(lenient_contract, {"from": a[0]})
+  return VotiumBribesProcessor.deploy(lenient_contract, {"from": accounts[0]})
 
 @pytest.fixture
 def oneE18():
@@ -104,7 +112,7 @@ def wbtc():
   
 @pytest.fixture
 def aura_processor(pricer):
-    return AuraBribesProcessor.deploy(pricer, {"from": a[0]})
+    return AuraBribesProcessor.deploy(pricer, {"from": accounts[0]})
 
 @pytest.fixture
 def balancer_vault():
