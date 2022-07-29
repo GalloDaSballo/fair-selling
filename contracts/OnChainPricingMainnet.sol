@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
 
@@ -114,14 +114,15 @@ contract OnChainPricingMainnet {
     uint256 public constant CURVE_FEE_SCALE = 100000;
     address public constant USDT = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     
-    // TODO: Consider making immutable
     /// @dev helper library to simulate Uniswap V3 swap
-    address public uniV3Simulator;
+    address public immutable uniV3Simulator;
     /// @dev helper library to simulate Balancer V2 swap
-    address public balancerV2Simulator;
+    address public immutable balancerV2Simulator;
 
 
     /// UniV3, replaces an array
+    /// @notice We keep above constructor, because this is a gas optimization
+    ///     Saves storing fee ids in storage, saving 2.1k+ per call
     uint256 constant univ3_fees_length = 4;
     function univ3_fees(uint256 i) internal pure returns (uint24) {
         if(i == 0){
@@ -135,23 +136,10 @@ contract OnChainPricingMainnet {
         }
     }
 
-	
-    /// === TEST-ONLY ===
     constructor(address _uniV3Simulator, address _balancerV2Simulator){
         uniV3Simulator = _uniV3Simulator;
         balancerV2Simulator = _balancerV2Simulator;
     }
-	
-    // function setUniV3Simulator(address _uniV3Simulator) external {
-    //     require(_uniV3Simulator != address(0));//TODO permission
-    //     uniV3Simulator = _uniV3Simulator;
-    // }
-	
-    // function setBalancerV2Simulator(address _balancerV2Simulator) external {
-    //     require(_balancerV2Simulator != address(0));//TODO permission
-    //     balancerV2Simulator = _balancerV2Simulator;
-    // }
-    /// === END TEST-ONLY ===
 
     struct Quote {
         SwapType name;
