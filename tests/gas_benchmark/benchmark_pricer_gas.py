@@ -33,7 +33,7 @@ def test_gas_uniswap_v2_sushi(oneE18, weth, pricer):
 def test_gas_only_balancer_v2(oneE18, weth, aura, pricer):
   token = aura # some swap (AURA-WETH) only in Balancer V2
   ## 1e18
-  sell_count = 2000
+  sell_count = 100
   sell_amount = sell_count * oneE18 ## 1e18
     
   tx = pricer.findOptimalSwap(token, weth.address, sell_amount)
@@ -44,7 +44,7 @@ def test_gas_only_balancer_v2(oneE18, weth, aura, pricer):
 def test_gas_only_balancer_v2_with_weth(oneE18, wbtc, aura, pricer):
   token = aura # some swap (AURA-WETH-WBTC) only in Balancer V2 via WETH in between as connector
   ## 1e18
-  sell_count = 2000
+  sell_count = 100
   sell_amount = sell_count * oneE18 ## 1e18
     
   tx = pricer.findOptimalSwap(token, wbtc.address, sell_amount)
