@@ -20,3 +20,6 @@ compiler:
 reports:
     exclude_contracts:
         - SafeERC20
+        - IERC20
+        - ReentrancyGuard
+        - Address
