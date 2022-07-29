@@ -15,6 +15,7 @@ import "../../interfaces/curve/ICurveRouter.sol";
 
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd @ BadgerDAO
+/// @dev Pricer V1
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
 /// @notice To spin a variant, just change the constants and use the Component Functions at the end of the file
 /// @notice Instead of upgrading in the future, just point to a new implementation

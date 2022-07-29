@@ -28,6 +28,7 @@ enum SwapType {
 /// @title OnChainPricing
 /// @author Alex the Entreprenerd for BadgerDAO
 /// @author Camotelli @rayeaster
+/// @dev Pricer V2
 /// @dev Mainnet Version of Price Quoter, hardcoded for more efficiency
 /// @notice Feature Complete, non gas optimized Mainnet Pricer
 ///     A complete quote will cost up to 1.6MLN gas.

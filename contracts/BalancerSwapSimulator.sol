@@ -32,7 +32,7 @@ interface IERC20Metadata {
 
 /// @dev Swap Simulator for Balancer V2
 contract BalancerSwapSimulator {    
-    uint256 internal constant _MAX_IN_RATIO = 0.3e18;	
+    uint256 internal constant _MAX_IN_RATIO = 0.3e18;
 	
     /// @dev reference https://github.com/balancer-labs/balancer-v2-monorepo/blob/master/pkg/pool-weighted/contracts/WeightedMath.sol#L78
     function calcOutGivenIn(ExactInQueryParam memory _query) public view returns (uint256) {	
