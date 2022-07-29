@@ -401,7 +401,7 @@ contract OnChainPricingMainnet {
 	
     /// @dev internal function for a basic sanity check pool existence and balances
     /// @return true if basic check pass otherwise false
-    function _checkPoolLiquidityAndBalances(uint256 _liq, uint256 _reserveIn, uint256 amountIn) internal view returns (bool) {
+    function _checkPoolLiquidityAndBalances(uint256 _liq, uint256 _reserveIn, uint256 amountIn) internal pure returns (bool) {
 	    
         {
              // heuristic check0: ensure the pool initiated with valid liquidity in place
@@ -557,7 +557,7 @@ contract OnChainPricingMainnet {
     }
 	
     /// @return selected BalancerV2 pool given the tokenIn and tokenOut 
-    function getBalancerV2Pool(address tokenIn, address tokenOut) public view returns(bytes32){
+    function getBalancerV2Pool(address tokenIn, address tokenOut) public pure returns(bytes32){
         (address token0, address token1) = tokenIn < tokenOut ? (tokenIn, tokenOut) : (tokenOut, tokenIn);
         if (token0 == CREAM && token1 == WETH){
             return BALANCERV2_CREAM_WETH_POOLID;
