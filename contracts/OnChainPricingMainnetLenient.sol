@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.10;
 
 
@@ -32,8 +32,11 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
 
     uint256 public slippage = 200; // 2% Initially
 
-    constructor(address _uniV3Simulator, address _balancerV2Simulator) OnChainPricingMainnet(_uniV3Simulator, _balancerV2Simulator){
-        
+    constructor(
+        address _uniV3Simulator, 
+        address _balancerV2Simulator
+    ) OnChainPricingMainnet(_uniV3Simulator, _balancerV2Simulator){
+        // Silence is golden
     }
 
     function setSlippage(uint256 newSlippage) external {

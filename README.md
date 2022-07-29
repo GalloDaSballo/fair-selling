@@ -1,8 +1,15 @@
 # Fair Selling
 
-## Release V0.2 - Pricer - BribesProcessor - CowswapSeller
+A BadgerDAO sponsored repo of Open Source Contracts for:
+- Integrating Smart Contracts with Cowswap
+- Non-Custodial handling of tokens via BribesProcessors
+- Calculating onChain Prices
+- Executing the best onChain Swap
 
-# CoswapSeller
+## Release V0.3 - Pricer - BribesProcessor - CowswapSeller
+
+# Notable Contracts
+## CowswapSeller
 
 OnChain Integration with Cowswap, all the functions you want to:
 - Verify an Order
@@ -10,23 +17,33 @@ OnChain Integration with Cowswap, all the functions you want to:
 - Validate an order through basic security checks (price is correct, sends to correct recipient)
 - Integrated with an onChain Pricer (see below), to offer stronger execution guarantees
 
-# BribesProcessor
+## BribesProcessor
 
-Anti-rug technlogy, allows a Multi-sig to rapidly process cowswap orders, without allowing the Multi to rug
+Anti-rug technplogy, allows a Multi-sig to rapidly process CowSwap orders, without allowing the Multi to rug
 Allows tokens to be rescued without the need for governance via the `ragequit` function
 
-# MainnetPricing
+- `AuraBribesProcessor` -> Processor for Votium Bribes earned by `bveAura`
+- `VotiumBribesProcessor` -> Processor for Votium Bribes earned by `bveCVX`
+
+## OnChainPricingMainnet
 
 Given a tokenIn, tokenOut and AmountIn, returns a Quote from the most popular dexes
 
-## Dexes Support
+- `OnChainPricingMainnet` -> Fully onChain math to find best, single source swap (no fragmented swaps yet)
+- `OnChainPricingMainnetLenient` -> Slippage tollerant version of the Pricer
+
+### Dexes Support
 - Curve
 - UniV2
 - UniV3
 - Balancer
 - Sushi
 
-Covering >80% TVL on Mainnet.
+Covering >80% TVL on Mainnet. (Prob even more)
+
+# Ar
+
+
 
 ## Example Usage
 
