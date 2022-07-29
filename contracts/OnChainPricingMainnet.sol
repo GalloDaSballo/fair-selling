@@ -176,7 +176,7 @@ contract OnChainPricingMainnet {
         }
 
         // Curve at this time has great execution prices but low selection
-        (address curvePool, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
+        (, uint256 curveQuote) = getCurvePrice(CURVE_ROUTER, tokenIn, tokenOut, amountIn);
         if (curveQuote > 0){
             return true;
         }
@@ -254,7 +254,7 @@ contract OnChainPricingMainnet {
         // check pool existence first before quote against it
         bool _univ2 = (router == UNIV2_ROUTER);
         
-        (address _pool, address _token0, address _token1) = pairForUniV2((_univ2? UNIV2_FACTORY : SUSHI_FACTORY), tokenIn, tokenOut, (_univ2? UNIV2_POOL_INITCODE : SUSHI_POOL_INITCODE));
+        (address _pool, address _token0, ) = pairForUniV2((_univ2? UNIV2_FACTORY : SUSHI_FACTORY), tokenIn, tokenOut, (_univ2? UNIV2_POOL_INITCODE : SUSHI_POOL_INITCODE));
         if (!_pool.isContract()){
             return 0;
         }
@@ -330,7 +330,7 @@ contract OnChainPricingMainnet {
                 // NOTE: A tick is like a ratio, so technically X ticks can offset a fee
                 // Meaning we prob don't need full quote in majority of cases, but can compare number of ticks
                 // per pool per fee and pre-rank based on that
-                (bool _crossTick, uint256 _outAmt) = _checkSimulationInUniV3(token0, token1, amountIn, _fee, token0Price);
+                (, uint256 _outAmt) = _checkSimulationInUniV3(token0, token1, amountIn, _fee, token0Price);
                 if (_outAmt > _maxQuote){
                     _maxQuote = _outAmt;
                     _maxQuoteFee = _fee;
@@ -345,7 +345,7 @@ contract OnChainPricingMainnet {
     /// @dev tell if there exists some Uniswap V3 pool for given token pair
     function checkUniV3PoolsExistence(address tokenIn, address tokenOut) public view returns (bool){
         uint256 feeTypes = univ3_fees_length;	
-        (address token0, address token1, bool token0Price) = _ifUniV3Token0Price(tokenIn, tokenOut);
+        (address token0, address token1, ) = _ifUniV3Token0Price(tokenIn, tokenOut);
         bool _exist;
         {    
           for (uint256 i = 0; i < feeTypes;){
@@ -432,7 +432,7 @@ contract OnChainPricingMainnet {
     /// @dev Given the address of the input token & amount & the output token
     /// @return the quote for it
     function getUniV3Price(address tokenIn, uint256 amountIn, address tokenOut) public view returns (uint256) {		
-        (uint256 _maxInRangeQuote, uint24 _maxPoolFee) = sortUniV3Pools(tokenIn, amountIn, tokenOut);		
+        (uint256 _maxInRangeQuote, ) = sortUniV3Pools(tokenIn, amountIn, tokenOut);		
         return _maxInRangeQuote;
     }
 	
@@ -512,7 +512,7 @@ contract OnChainPricingMainnet {
             if(balances[_inTokenIdx] <= amountIn) return 0;
 		
             /// Balancer math for spot price of tokenIn -> tokenOut: weighted value(number * price) relation should be kept
-            try IBalancerV2StablePool(_pool).getAmplificationParameter() returns (uint256 currentAmp, bool isUpdating, uint256 precision) {
+            try IBalancerV2StablePool(_pool).getAmplificationParameter() returns (uint256 currentAmp, bool, uint256) {
                 // stable pool math
                 {
                    ExactInStableQueryParam memory _stableQuery = ExactInStableQueryParam(tokens, balances, currentAmp, _inTokenIdx, _outTokenIdx, amountIn, IBalancerV2StablePool(_pool).getSwapFeePercentage());
