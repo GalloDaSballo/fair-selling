@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: GPL-2.0
 pragma solidity 0.8.10;
 
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
