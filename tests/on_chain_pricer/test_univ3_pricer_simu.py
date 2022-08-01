@@ -83,7 +83,8 @@ def test_only_sushi_support(oneE18, xsushi, usdc, pricer):
   supported = pricer.isPairSupported(xsushi.address, usdc.address, sell_amount)
   assert supported == True
   
-def test_only_curve_support(oneE18, usdc, pricer):  
+def test_only_curve_support(oneE18, usdc, badger, aura, pricerwrapper):
+  pricer = pricerwrapper   
   ## 1e18
   sell_amount = 1000 * oneE18
   
@@ -91,10 +92,10 @@ def test_only_curve_support(oneE18, usdc, pricer):
   supported = pricer.isPairSupported("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
   assert supported == True
   quoteTx = pricer.findOptimalSwap("0x2a54ba2964c8cd459dc568853f79813a60761b58", usdc.address, sell_amount)
-  assert quoteTx.return_value[1] > 0
-  assert quoteTx.return_value[0] == 0
+  assert quoteTx[1][1] > 0
+  assert quoteTx[1][0] == 0
   
   ## not supported yet
-  isBadgerAuraSupported = pricer.isPairSupported(pricer.BADGER(), pricer.AURA(), sell_amount * 100)
+  isBadgerAuraSupported = pricer.isPairSupported(badger.address, aura.address, sell_amount * 100)
   assert isBadgerAuraSupported == False
  

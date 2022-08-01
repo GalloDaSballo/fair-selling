@@ -105,7 +105,8 @@ def test_get_balancer_price_aurabal_analytical(oneE18, aurabal, weth, pricer):
 """
     getBalancerPrice quote for token A swapped to token B directly using given balancer pool: A - > B
 """
-def test_get_balancer_price_aurabal_bpt_analytical(oneE18, aurabal, balethbpt, pricer):  
+def test_get_balancer_price_aurabal_bpt_analytical(oneE18, aurabal, balethbpt, pricerwrapper): 
+  pricer = pricerwrapper 
   ## 1e18
   sell_count = 100
   sell_amount = sell_count * oneE18
@@ -114,8 +115,8 @@ def test_get_balancer_price_aurabal_bpt_analytical(oneE18, aurabal, balethbpt, p
   p = sell_count * 1 * oneE18  
     
   ## there is a proper pool in Balancer for AURABAL in BAL-ETH bpt
-  quote = pricer.findOptimalSwap(balethbpt.address, aurabal.address, sell_amount).return_value
-  assert quote[1] >= p 
+  quote = pricer.findOptimalSwap(balethbpt.address, aurabal.address, sell_amount)
+  assert quote[1][1] >= p 
   
 def test_balancer_not_supported_tokens(oneE18, tusd, usdc, pricer):  
   ## tokenIn not in the given balancer pool

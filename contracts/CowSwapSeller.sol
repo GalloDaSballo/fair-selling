@@ -29,7 +29,7 @@ struct Quote {
     uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
 }
 interface OnChainPricing {
-  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
+  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
 }
 // END OnchainPricing
 
