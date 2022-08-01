@@ -13,10 +13,13 @@ dependencies:
 # path remapping to support imports from GitHub/NPM
 compiler:
     solc:
-        version: 0.8.10
+        # version: 0.8.10
         remappings:
             - "@oz=OpenZeppelin/openzeppelin-contracts@4.5.0/contracts/"
 
 reports:
     exclude_contracts:
         - SafeERC20
+        - IERC20
+        - ReentrancyGuard
+        - Address

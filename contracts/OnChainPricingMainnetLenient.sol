@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0
 pragma solidity 0.8.10;
 
 
@@ -32,6 +32,12 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
 
     uint256 public slippage = 200; // 2% Initially
 
+    constructor(
+        address _uniV3Simulator, 
+        address _balancerV2Simulator
+    ) OnChainPricingMainnet(_uniV3Simulator, _balancerV2Simulator){
+        // Silence is golden
+    }
 
     function setSlippage(uint256 newSlippage) external {
         require(msg.sender == TECH_OPS, "Only TechOps");
@@ -42,7 +48,7 @@ contract OnChainPricingMainnetLenient is OnChainPricingMainnet {
     // === PRICING === //
 
     /// @dev View function for testing the routing of the strategy
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external override returns (Quote memory q) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view override returns (Quote memory q) {
         q = _findOptimalSwap(tokenIn, tokenOut, amountIn);
         q.amountOut = q.amountOut * (MAX_BPS - slippage) / MAX_BPS;
     }

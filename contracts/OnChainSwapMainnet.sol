@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0
 pragma solidity 0.8.10;
 
 import {IERC20} from "@oz/token/ERC20/IERC20.sol";
@@ -31,7 +31,7 @@ struct Quote {
 }
 
 interface OnChainPricing {
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
 }
 
 /// @dev Mainnet Version of swap for various on-chain dex
@@ -45,7 +45,7 @@ contract OnChainSwapMainnet {
     address public constant SUSHI_ROUTER = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F;
     address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; 
 	
-    uint256 public SWAP_SLIPPAGE_TOLERANCE = 500;//initially 5%
+    uint256 public SWAP_SLIPPAGE_TOLERANCE = 500; // initially 5%
     uint256 public constant SWAP_SLIPPAGE_MAX = 10000;
 		
     address public constant TECH_OPS = 0x86cbD0ce0c087b482782c181dA8d191De18C8275;

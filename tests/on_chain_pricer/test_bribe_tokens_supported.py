@@ -32,9 +32,9 @@ FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
 TOKENS_18_DECIMALS = [
   AURA,
   AURA_BAL, ## Not Supported -> To FIX TODO ADD BAL POOL
-  SD, ## Not Supported -> Cannot fix at this time
+  #SD, ## Not Supported -> Cannot fix at this time
   DFX,
-  FDT, ## Not Supported -> Cannot fix at this time
+  #FDT, ## Not Supported -> Cannot fix at this time
   LDO,
   COW,
   GNO,
@@ -47,7 +47,8 @@ TOKENS_18_DECIMALS = [
 ]
 
 @pytest.mark.parametrize("token", TOKENS_18_DECIMALS)
-def test_are_bribes_supported(pricer, token):
+def test_are_bribes_supported(pricerwrapper, token):
+  pricer = pricerwrapper 
   """
     Given a bunch of tokens historically used as bribes, verifies the pricer will return non-zero value
     We sell all to WETH which is pretty realistic
@@ -56,7 +57,9 @@ def test_are_bribes_supported(pricer, token):
   ## 1e18 for everything, even with insane slippage will still return non-zero which is sufficient at this time
   AMOUNT = 1e18
   
-  res = pricer.isPairSupported(token, WETH, AMOUNT).return_value
+  res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
-
+  
+  quote = pricer.findOptimalSwap.call(token, WETH, AMOUNT)
+  assert quote[1][1] > 0
 

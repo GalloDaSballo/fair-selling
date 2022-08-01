@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0
 pragma solidity 0.8.10;
 
 
@@ -29,7 +29,7 @@ struct Quote {
     uint256[] poolFees; // specific pool fees involved in the optimal swap path, typically in Uniswap V3
 }
 interface OnChainPricing {
-  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
+  function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
 }
 // END OnchainPricing
 
@@ -142,11 +142,15 @@ contract CowSwapSeller is ReentrancyGuard {
         domainSeparator = SETTLEMENT.domainSeparator();
     }
 
+    /// @dev Set the Pricer Contract used to determine if a Order is fair
+    /// @param newPricer - the new pricer
     function setPricer(OnChainPricing newPricer) external {
         require(msg.sender == DEV_MULTI);
         pricer = newPricer;
     }
 
+    /// @dev Set the Manager, the account that can process the tokens
+    /// @param newManager - the new manager
     function setManager(address newManager) external {
         require(msg.sender == manager);
         manager = newManager;
@@ -192,6 +196,9 @@ contract CowSwapSeller is ReentrancyGuard {
         }
     }
 
+    /// @dev Given the orderData, returns an orderId
+    /// @param orderData - All the information for a Cowswap Order
+    /// @return bytes - the OrderId
     function getOrderID(Data calldata orderData) public view returns (bytes memory) {
         // Allocated
         bytes memory orderUid = new bytes(UID_LENGTH);
@@ -203,6 +210,13 @@ contract CowSwapSeller is ReentrancyGuard {
         return orderUid;
     }
 
+    /// @dev Given the orderData and the orderUid
+    ///     Verify the parameter match the id and do basic checks for price and recipient
+    /// @notice Virtual so you can override, e.g. for Limit Orders by other contracts
+    /// @notice Reverts on lack of basic validation
+    ///     However it returns false if the slippage check didn't pass
+    ///     Meaning it won't revert if you've been quoted a bad price
+    /// @return bool - Whether it passed the slippage checks
     function checkCowswapOrder(Data calldata orderData, bytes memory orderUid) public virtual returns(bool) {
         // Verify we get the same ID
         // NOTE: technically superfluous as we could just derive the id and setPresignature with that
@@ -232,6 +246,8 @@ contract CowSwapSeller is ReentrancyGuard {
 
 
     /// @dev This is the function you want to use to perform a swap on Cowswap via this smart contract
+    /// @param orderData - The data for the order, see {Data}
+    /// @param orderUid - the identifier for the order
     function _doCowswapOrder(Data calldata orderData, bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
@@ -248,6 +264,7 @@ contract CowSwapSeller is ReentrancyGuard {
 
     /// @dev Allows to cancel a cowswap order perhaps if it took too long or was with invalid parameters
     /// @notice This function performs no checks, there's a high change it will revert if you send it with fluff parameters
+    /// @param orderUid - The id of the order to cancel
     function _cancelCowswapOrder(bytes memory orderUid) internal nonReentrant {
         require(msg.sender == manager);
 
