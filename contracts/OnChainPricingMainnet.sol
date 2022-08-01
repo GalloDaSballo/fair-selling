@@ -188,13 +188,13 @@ contract OnChainPricingMainnet {
     /// @param tokenIn - The token you want to sell
     /// @param tokenOut - The token you want to buy
     /// @param amountIn - The amount of token you want to sell
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external virtual returns (Quote memory) {
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view virtual returns (Quote memory) {
         return _findOptimalSwap(tokenIn, tokenOut, amountIn);
     }
 
     /// @dev View function for testing the routing of the strategy
     /// See {findOptimalSwap}
-    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal returns (Quote memory) {
+    function _findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) internal view returns (Quote memory) {
         bool wethInvolved = (tokenIn == WETH || tokenOut == WETH);
         uint256 length = wethInvolved? 5 : 7; // Add length you need
 

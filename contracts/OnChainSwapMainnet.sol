@@ -31,7 +31,7 @@ struct Quote {
 }
 
 interface OnChainPricing {
-    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external returns (Quote memory);
+    function findOptimalSwap(address tokenIn, address tokenOut, uint256 amountIn) external view returns (Quote memory);
 }
 
 /// @dev Mainnet Version of swap for various on-chain dex

@@ -48,12 +48,13 @@ TOP_DECIMAL18_TOKENS = [
 ]
 
 @pytest.mark.parametrize("token,count", TOP_DECIMAL18_TOKENS)
-def test_token_decimal18(oneE18, weth, token, count, pricer):
+def test_token_decimal18(oneE18, weth, token, count, pricerwrapper):
+  pricer = pricerwrapper   
   sell_token = token
   ## 1e18
   sell_count = count
   sell_amount = sell_count * oneE18 ## 1e18
     
-  quote = pricer.findOptimalSwap.call(sell_token, weth.address, sell_amount)
-  assert quote[1] > 0  
+  quote = pricer.findOptimalSwap(sell_token, weth.address, sell_amount)
+  assert quote[1][1] > 0  
  

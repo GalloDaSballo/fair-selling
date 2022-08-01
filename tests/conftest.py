@@ -56,6 +56,13 @@ def swapexecutor():
   return OnChainSwapMainnet.deploy({"from": accounts[0]})
   
 @pytest.fixture
+def pricerwrapper():
+  univ3simulator = UniV3SwapSimulator.deploy({"from": accounts[0]})
+  balancerV2Simulator = BalancerSwapSimulator.deploy({"from": accounts[0]})
+  pricer = OnChainPricingMainnet.deploy(univ3simulator.address, balancerV2Simulator.address, {"from": accounts[0]})  
+  return PricerWrapper.deploy(pricer.address, {"from": accounts[0]})
+
+@pytest.fixture
 def pricer():
   univ3simulator = UniV3SwapSimulator.deploy({"from": accounts[0]})
   balancerV2Simulator = BalancerSwapSimulator.deploy({"from": accounts[0]})
