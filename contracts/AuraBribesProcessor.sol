@@ -202,13 +202,25 @@ contract AuraBribesProcessor is CowSwapSeller {
         swaps[0] = batchSwapStep;
 
         // Amount out is positive amount of second asset delta
-        int256[] memory assetDeltas = BALANCER_VAULT.queryBatchSwap(
+        uint256 fromPurchase;
+        
+        try BALANCER_VAULT.queryBatchSwap(
             IBalancerVault.SwapKind.GIVEN_IN,
             swaps,
             assets,
             fundManagement
-        );
-        uint256 fromPurchase = uint256(-assetDeltas[1]);
+        ) returns (int256[] memory assetDeltas) {
+            // Try
+            if(-assetDeltas[1] > 0) {
+                fromPurchase = uint256(-assetDeltas[1]);
+            }
+        } catch {
+            // Catch clause 
+            // Revert
+            // 0 is acceptable as vault would never quote 0 unless balance is ininitely greater
+            // Even in that case we would prob rather deposit in the vault
+            fromPurchase = 0;
+        }
 
         // Check math from vault
         // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
@@ -216,7 +228,7 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         uint256 ops_fee;
         uint256 toEmit;
-        if(fromDeposit > fromPurchase) {
+        if(fromDeposit >= fromPurchase) {
             // Costs less to deposit
 
             //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
