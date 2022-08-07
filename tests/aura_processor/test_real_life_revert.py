@@ -29,22 +29,45 @@ def fixed_contract(live_pricer, reverting_contract, manager, aura, aura_whale):
 
 
 
-def test_compare_live_to_fix(reverting_contract, fixed_contract, manager, aura, bve_aura, aura_whale):
+def test_compare_live_to_fix(reverting_contract, fixed_contract, manager, aura, bve_aura):
+  """
+    Demonstrate revert in old code
+    Shows new code won't revert
+    Proves math equivalence via exact amount sent to tree
+  """
   live_manager = accounts.at(reverting_contract.manager(), force=True)
 
-  with brownie.reverts():
-    reverting_contract.swapAURATobveAURAAndEmit({"from": live_manager})
-
+  ## Setup
   tree = fixed_contract.BADGER_TREE()
   prev_bal = bve_aura.balanceOf(tree)
 
-  assert aura.balanceOf(fixed_contract) > 0
+  bve_sett = interface.ISettV4(fixed_contract.BVE_AURA())
 
+  ## Math for expected number of tokens out from vault
+  prev_bal = bve_aura.balanceOf(tree)
+
+  aura_to_process =  aura.balanceOf(fixed_contract)
+
+  assert aura_to_process > 0
+
+  ops_fee = aura_to_process * fixed_contract.OPS_FEE() // (fixed_contract.MAX_BPS() - fixed_contract.BADGER_SHARE())
+
+  expected_bve_aura_to_tree = (aura_to_process - ops_fee) * bve_sett.totalSupply() // bve_sett.balance()
+
+  
+  ## Show revert on live ## NOTE: This may stop reverting for external reasons
+  with brownie.reverts():
+    reverting_contract.swapAURATobveAURAAndEmit({"from": live_manager})
+  
+
+
+  ## Run fixed and check
   fixed_contract.swapAURATobveAURAAndEmit({"from": manager})
   after_bal = bve_aura.balanceOf(tree)
 
   ## Net increase
   assert after_bal > prev_bal
 
-  ## TODO: Proper exact math to make sure no value was leaked
+  ## Proper exact math to make sure no value was leaked
+  assert after_bal - prev_bal == expected_bve_aura_to_tree
   
