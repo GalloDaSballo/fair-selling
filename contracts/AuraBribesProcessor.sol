@@ -56,8 +56,6 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
-    IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
-
     // We send tokens to emit here
     IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
 
