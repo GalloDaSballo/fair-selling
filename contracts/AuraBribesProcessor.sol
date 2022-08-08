@@ -190,6 +190,7 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         // === Emit bveAURA === //
         uint256 totalBveAURA = BVE_AURA.balanceOf(address(this));
+        require(totalBveAURA > 0);
 
         uint256 ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
         IERC20(address(BVE_AURA)).safeTransfer(TREASURY, ops_fee);
