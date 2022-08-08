@@ -60,7 +60,7 @@ def test_swap_weth_for_badger_must_be_weth_badger(setup_aura_processor, weth, ba
 
 
 
-### Swap Weth for AURA
+### Swap Weth for AURA or graviAURA
 
 def test_swap_weth_for_aura(setup_aura_processor, weth, aura, manager, settlement):
   sell_amount = 100000000000000000000
@@ -74,7 +74,19 @@ def test_swap_weth_for_aura(setup_aura_processor, weth, aura, manager, settlemen
 
   assert settlement.preSignature(uid) > 0
 
-def test_swap_weth_for_aura_must_be_weth_aura(setup_aura_processor, weth, badger, usdc, aura, manager, settlement):
+def test_swap_weth_for_graviaura(setup_aura_processor, weth, bve_aura, manager, settlement):
+  sell_amount = 10000000000000000000 # 10 wETH since there is lower liquidity for graviAURA (fails with 100 wETH)
+
+  order_details = get_cowswap_order(setup_aura_processor, weth, bve_aura, sell_amount)
+
+  data = order_details.order_data
+  uid = order_details.order_uid
+
+  setup_aura_processor.swapWethForAURA(data, uid, {"from": manager})
+
+  assert settlement.preSignature(uid) > 0
+
+def test_swap_weth_for_aura_must_be_weth_aura(setup_aura_processor, weth, badger, usdc, aura, manager):
   ## Fail if opposite swap
   sell_amount = 100000000000000000000
 
