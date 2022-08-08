@@ -218,6 +218,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         BADGER.safeIncreaseAllowance(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));
 
+        emit PerformanceFeeGovernance(address(BADGER), ops_fee);
         emit BribeEmission(address(BADGER), address(BVE_AURA), toEmitTotal);
     }
 
