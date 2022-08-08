@@ -187,7 +187,6 @@ contract AuraBribesProcessor is CowSwapSeller {
             // NOTE: Can be re-extended to use xyz stable pool (just use try/catch and expect long term failure)
         }
 
-
         // === Emit bveAURA === //
         uint256 totalBveAURA = BVE_AURA.balanceOf(address(this));
         require(totalBveAURA > 0);
