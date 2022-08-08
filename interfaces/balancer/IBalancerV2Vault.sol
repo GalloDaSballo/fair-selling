@@ -28,8 +28,12 @@ struct FundManagement {
     bool toInternalBalance;
 }
 
+enum PoolSpecialization { GENERAL, MINIMAL_SWAP_INFO, TWO_TOKEN }
+
 interface IBalancerV2Vault {
     function batchSwap(SwapKind kind, BatchSwapStep[] calldata swaps, address[] calldata assets, FundManagement calldata funds, int256[] calldata limits, uint256 deadline) external returns (int256[] memory assetDeltas);
     function queryBatchSwap(SwapKind kind, BatchSwapStep[] calldata swaps, address[] calldata assets, FundManagement calldata funds) external returns (int256[] memory assetDeltas);
     function swap(SingleSwap calldata singleSwap, FundManagement calldata funds, uint256 limit, uint256 deadline) external returns (uint256 amountCalculatedInOut);
+    function getPool(bytes32 poolId) external view returns (address, PoolSpecialization);
+    function getPoolTokens(bytes32 poolId) external view returns (address[] memory tokens, uint256[] memory balances, uint256 lastChangeBlock);
 }
