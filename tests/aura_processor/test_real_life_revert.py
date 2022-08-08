@@ -50,7 +50,7 @@ def test_compare_live_to_fix(reverting_contract, fixed_contract, manager, aura, 
 
   assert aura_to_process > 0
 
-  ops_fee = aura_to_process * fixed_contract.OPS_FEE() // (fixed_contract.MAX_BPS() - fixed_contract.BADGER_SHARE())
+  ops_fee = aura_to_process * fixed_contract.OPS_FEE() // fixed_contract.MAX_BPS()
 
   expected_bve_aura_to_tree = (aura_to_process - ops_fee) * bve_sett.totalSupply() // bve_sett.balance()
 

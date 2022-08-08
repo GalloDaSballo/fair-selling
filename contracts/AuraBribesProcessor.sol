@@ -47,19 +47,14 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     // Source: https://badger.com/graviaura
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant BADGER_SHARE = 2500; //25.00%
-
     // A 5% fee will be charged on all bribes processed.
     uint256 public constant OPS_FEE = 500; // 5%
-    // uint256 public constant LP_FEE = 0; // Not used
 
     /// `treasury_voter_multisig`
     /// https://github.com/Badger-Finance/badger-multisig/blob/6cd8f42ae0313d0da33a208d452370343e7599ba/helpers/addresses.py#L52
     address public constant TREASURY = 0xA9ed98B5Fb8428d68664f3C5027c62A10d45826b;
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
-
-    IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     // We send tokens to emit here
     IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
@@ -191,7 +186,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         uint256 totalBveAURA = BVE_AURA.balanceOf(address(this));
         require(totalBveAURA > 0);
 
-        uint256 ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
+        uint256 ops_fee = totalBveAURA * OPS_FEE / MAX_BPS;
         IERC20(address(BVE_AURA)).safeTransfer(TREASURY, ops_fee);
 
         // Subtraction to avoid dust
@@ -213,10 +208,14 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         // Sends Badger to the Tree
         // Emits custom event for it
-        uint256 toEmitTotal = BADGER.balanceOf(address(this));
-        require(toEmitTotal > 0);
+        uint256 totalBadger = BADGER.balanceOf(address(this));
+        require(totalBadger > 0);
 
-        BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
+        uint256 ops_fee = totalBadger * OPS_FEE / MAX_BPS;
+        IERC20(address(BADGER)).safeTransfer(TREASURY, ops_fee);
+
+        uint256 toEmitTotal = totalBadger - ops_fee;
+        BADGER.safeIncreaseAllowance(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));
 
         emit BribeEmission(address(BADGER), address(BVE_AURA), toEmitTotal);
