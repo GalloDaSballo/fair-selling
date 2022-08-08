@@ -173,9 +173,9 @@ contract AuraBribesProcessor is CowSwapSeller {
         // swap it for bveAura if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
+        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
         uint256 totalAURA = AURA.balanceOf(address(this));
-        require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
         
         // === Handling of AURA === //
         if(totalAURA > 0) {
