@@ -212,12 +212,13 @@ contract AuraBribesProcessor is CowSwapSeller {
         require(totalBadger > 0);
 
         uint256 ops_fee = totalBadger * OPS_FEE / MAX_BPS;
-        IERC20(address(BADGER)).safeTransfer(TREASURY, ops_fee);
+        BADGER.safeTransfer(TREASURY, ops_fee);
 
         uint256 toEmitTotal = totalBadger - ops_fee;
         BADGER.safeIncreaseAllowance(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));
 
+        emit PerformanceFeeGovernance(address(BADGER), ops_fee);
         emit BribeEmission(address(BADGER), address(BVE_AURA), toEmitTotal);
     }
 
