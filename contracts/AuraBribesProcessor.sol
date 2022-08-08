@@ -59,9 +59,9 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
 
-    /// BVE_AURA, WETH, AURA
+    /// BVE_AURA, WETH, AURABal
     /// https://app.balancer.fi/#/pool/0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267
-    bytes32 public constant BVE_AURA_WETH_AURA_POOL = 0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267;
+    bytes32 public constant BVE_AURA_WETH_AURABAL_POOL = 0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267;
 
     IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
@@ -154,18 +154,21 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     /// @dev
     /// Step 2.b
-    /// Swap WETH -> AURA
+    /// Swap WETH -> graviAURA or WETH -> AURA
     function swapWethForAURA(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH); // Must Sell WETH
-        require(orderData.buyToken == AURA); // Must buy AURA
+        require(orderData.buyToken == AURA || orderData.buyToken == BVE_AURA); // Must buy AURA or BVE_AURA
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
     }
 
+    /// AURA -> graviAURA -> Always Deposit in vault, unless direct pool
+
     /// @dev
     /// Step 3 Emit the Aura
     /// Takes all the Aura, takes fee, locks and emits it
+    // TODO: REDO MATH to handle case of AURA / graviAURA already in this contract
     function swapAURATobveAURAAndEmit() external nonReentrant {
         // Will take all the Aura left,
         // swap it for bveAura if cheaper, or deposit it directly
@@ -191,7 +194,7 @@ contract AuraBribesProcessor is CowSwapSeller {
         bytes memory emptyBytes = new bytes(0);
 
         IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
-            poolId: BVE_AURA_WETH_AURA_POOL,
+            poolId: BVE_AURA_WETH_AURABAL_POOL, // NOTE: This pool should be substituted with a graviAURA / AURA Pool
             assetInIndex: 0,
             assetOutIndex: 1,
             amount: totalAURA,
@@ -256,7 +259,7 @@ contract AuraBribesProcessor is CowSwapSeller {
             AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
 
             IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
-                poolId: BVE_AURA_WETH_AURA_POOL,
+                poolId: BVE_AURA_WETH_AURABAL_POOL,
                 kind: IBalancerVault.SwapKind.GIVEN_IN,
                 assetIn: IAsset(address(AURA)),
                 assetOut: IAsset(address(BVE_AURA)),
