@@ -146,7 +146,7 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 2.b
     /// Swap WETH -> graviAURA or WETH -> AURA
-    function swapWethForAURA(Data calldata orderData, bytes memory orderUid) external {
+    function swapWethForAuraOrBveAura(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH); // Must Sell WETH
         require(
             orderData.buyToken == AURA || 
