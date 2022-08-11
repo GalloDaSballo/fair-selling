@@ -47,23 +47,14 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     // Source: https://badger.com/graviaura
     uint256 public constant MAX_BPS = 10_000;
-    uint256 public constant BADGER_SHARE = 2500; //25.00%
-
     // A 5% fee will be charged on all bribes processed.
     uint256 public constant OPS_FEE = 500; // 5%
-    // uint256 public constant LP_FEE = 0; // Not used
 
     /// `treasury_voter_multisig`
     /// https://github.com/Badger-Finance/badger-multisig/blob/6cd8f42ae0313d0da33a208d452370343e7599ba/helpers/addresses.py#L52
     address public constant TREASURY = 0xA9ed98B5Fb8428d68664f3C5027c62A10d45826b;
 
     IVault public constant BVE_AURA = IVault(0xBA485b556399123261a5F9c95d413B4f93107407);
-
-    /// BVE_AURA, WETH, AURA
-    /// https://app.balancer.fi/#/pool/0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267
-    bytes32 public constant BVE_AURA_WETH_AURA_POOL = 0xa3283e3470d3cd1f18c074e3f2d3965f6d62fff2000100000000000000000267;
-
-    IBalancerVault public constant BALANCER_VAULT = IBalancerVault(0xBA12222222228d8Ba445958a75a0704d566BF2C8);
 
     // We send tokens to emit here
     IHarvestForwarder public constant HARVEST_FORWARDER = IHarvestForwarder(0xA84B663837D94ec41B0f99903f37e1d69af9Ed3E);
@@ -154,116 +145,55 @@ contract AuraBribesProcessor is CowSwapSeller {
 
     /// @dev
     /// Step 2.b
-    /// Swap WETH -> AURA
+    /// Swap WETH -> graviAURA or WETH -> AURA
     function swapWethForAURA(Data calldata orderData, bytes memory orderUid) external {
         require(orderData.sellToken == WETH); // Must Sell WETH
-        require(orderData.buyToken == AURA); // Must buy AURA
+        require(
+            orderData.buyToken == AURA || 
+            orderData.buyToken == IERC20(address(BVE_AURA))
+        ); // Must buy AURA or BVE_AURA
 
         /// NOTE: checks for msg.sender == manager
         _doCowswapOrder(orderData, orderUid);
     }
 
+    /// AURA -> graviAURA -> Always Deposit in vault, unless direct pool
+
     /// @dev
     /// Step 3 Emit the Aura
     /// Takes all the Aura, takes fee, locks and emits it
+    // TODO: REDO MATH to handle case of AURA / graviAURA already in this contract
     function swapAURATobveAURAAndEmit() external nonReentrant {
         // Will take all the Aura left,
         // swap it for bveAura if cheaper, or deposit it directly
         // and then emit it
         require(msg.sender == manager);
-
-        uint256 totalAURA = AURA.balanceOf(address(this));
-        require(totalAURA > 0);
         require(HARVEST_FORWARDER.badger_tree() == BADGER_TREE);
 
-        // Get quote from balancer pool using queryBatchSwap
-        IBalancerVault.FundManagement memory fundManagement = IBalancerVault.FundManagement({
-            sender: address(this),
-            fromInternalBalance: false,
-            recipient: payable(address(this)),
-            toInternalBalance: false
-        });
+        uint256 totalAURA = AURA.balanceOf(address(this));
+        
+        // === Handling of AURA === //
+        if(totalAURA > 0) {
+            // We'll also deposit the AURA
+            AURA.safeIncreaseAllowance(address(BVE_AURA), totalAURA);
+            // Deposit to address(this)
+            BVE_AURA.deposit(totalAURA);
 
-        IAsset[] memory assets = new IAsset[](2);
-        assets[0] = IAsset(address(AURA));
-        assets[1] = IAsset(address(BVE_AURA));
-
-        bytes memory emptyBytes = new bytes(0);
-
-        IBalancerVault.BatchSwapStep memory batchSwapStep = IBalancerVault.BatchSwapStep({
-            poolId: BVE_AURA_WETH_AURA_POOL,
-            assetInIndex: 0,
-            assetOutIndex: 1,
-            amount: totalAURA,
-            userData: emptyBytes
-        });
-
-        IBalancerVault.BatchSwapStep[] memory swaps = new IBalancerVault.BatchSwapStep[](1);
-        swaps[0] = batchSwapStep;
-
-        // Amount out is positive amount of second asset delta
-        int256[] memory assetDeltas = BALANCER_VAULT.queryBatchSwap(
-            IBalancerVault.SwapKind.GIVEN_IN,
-            swaps,
-            assets,
-            fundManagement
-        );
-        uint256 fromPurchase = uint256(-assetDeltas[1]);
-
-        // Check math from vault
-        // from Vault code shares = (_amount.mul(totalSupply())).div(_pool);
-        uint256 fromDeposit = totalAURA * BVE_AURA.totalSupply() / BVE_AURA.balance();
-
-        uint256 ops_fee;
-        uint256 toEmit;
-        if(fromDeposit > fromPurchase) {
-            // Costs less to deposit
-
-            //  ops_fee = int(total / (1 - BADGER_SHARE) * OPS_FEE), adapted to solidity for precision
-            ops_fee = totalAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
-
-            toEmit = totalAURA - ops_fee;
-            AURA.safeApprove(address(BVE_AURA), totalAURA);
-            uint256 treasuryPrevBalance = BVE_AURA.balanceOf(TREASURY);
-
-            // If we don't swap
-
-            // Take the fee
-            BVE_AURA.depositFor(TREASURY, ops_fee);
-
-            // Deposit and emit rest
-            uint256 initialBveAURABalance = BVE_AURA.balanceOf((address(this)));
-            BVE_AURA.deposit(toEmit);
-
-            // Update vars as we emit event with them
-            ops_fee = BVE_AURA.balanceOf(TREASURY) - treasuryPrevBalance;
-            toEmit = BVE_AURA.balanceOf(address(this)) - initialBveAURABalance;
-        } else {
-            // Buy from pool using singleSwap
-
-            AURA.safeApprove(address(BALANCER_VAULT), totalAURA);
-
-            IBalancerVault.SingleSwap memory singleSwap = IBalancerVault.SingleSwap({
-                poolId: BVE_AURA_WETH_AURA_POOL,
-                kind: IBalancerVault.SwapKind.GIVEN_IN,
-                assetIn: IAsset(address(AURA)),
-                assetOut: IAsset(address(BVE_AURA)),
-                amount: totalAURA,
-                userData: emptyBytes
-            });
-
-            uint256 totalBveAURA = BALANCER_VAULT.swap(singleSwap, fundManagement, fromPurchase, block.timestamp);
-
-            ops_fee = totalBveAURA * OPS_FEE / (MAX_BPS - BADGER_SHARE);
-
-            toEmit = totalBveAURA - ops_fee;
-
-            // Take fee
-            IERC20(address(BVE_AURA)).safeTransfer(TREASURY, ops_fee);
+            // NOTE: Can be re-extended to use xyz stable pool (just use try/catch and expect long term failure)
         }
 
-        // Emit token
-        IERC20(address(BVE_AURA)).safeApprove(address(HARVEST_FORWARDER), toEmit);
+        // === Emit bveAURA === //
+        uint256 totalBveAURA = BVE_AURA.balanceOf(address(this));
+        require(totalBveAURA > 0);
+
+        uint256 ops_fee = totalBveAURA * OPS_FEE / MAX_BPS;
+        IERC20(address(BVE_AURA)).safeTransfer(TREASURY, ops_fee);
+
+        // Subtraction to avoid dust
+        uint256 toEmit = totalBveAURA - ops_fee;
+
+        // Emit token to tree via HARVEST_FORWARDER
+        IERC20(address(BVE_AURA)).safeIncreaseAllowance(address(HARVEST_FORWARDER), toEmit);
         HARVEST_FORWARDER.distribute(address(BVE_AURA), toEmit, address(BVE_AURA));
 
         emit PerformanceFeeGovernance(address(BVE_AURA), ops_fee);
@@ -278,12 +208,17 @@ contract AuraBribesProcessor is CowSwapSeller {
 
         // Sends Badger to the Tree
         // Emits custom event for it
-        uint256 toEmitTotal = BADGER.balanceOf(address(this));
-        require(toEmitTotal > 0);
+        uint256 totalBadger = BADGER.balanceOf(address(this));
+        require(totalBadger > 0);
 
-        BADGER.safeApprove(address(HARVEST_FORWARDER), toEmitTotal);
+        uint256 ops_fee = totalBadger * OPS_FEE / MAX_BPS;
+        BADGER.safeTransfer(TREASURY, ops_fee);
+
+        uint256 toEmitTotal = totalBadger - ops_fee;
+        BADGER.safeIncreaseAllowance(address(HARVEST_FORWARDER), toEmitTotal);
         HARVEST_FORWARDER.distribute(address(BADGER), toEmitTotal, address(BVE_AURA));
 
+        emit PerformanceFeeGovernance(address(BADGER), ops_fee);
         emit BribeEmission(address(BADGER), address(BVE_AURA), toEmitTotal);
     }
 
