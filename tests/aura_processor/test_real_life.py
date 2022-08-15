@@ -8,6 +8,15 @@ LIVE_PROCESSOR = "0x8abd28e4d69bd3953b96dd9ed63533765adb9965"
 
 EXPECT_REVERT = True
 
+"""
+  NOTE: 
+  Neutrino
+  T
+  Worhmhole UST
+  All fail at the Cowswap level
+  TODO: Ack / Remove or leave as failing
+"""
+
 @pytest.fixture
 def reverting_contract():
   return AuraBribesProcessor.at(LIVE_PROCESSOR)
