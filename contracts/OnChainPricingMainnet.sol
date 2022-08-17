@@ -516,15 +516,26 @@ contract OnChainPricingMainnet {
                 // stable pool math
                 {
                    ExactInStableQueryParam memory _stableQuery = ExactInStableQueryParam(tokens, balances, currentAmp, _inTokenIdx, _outTokenIdx, amountIn, IBalancerV2StablePool(_pool).getSwapFeePercentage());
-                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenInForStable(_stableQuery);
+
+                    try IBalancerV2Simulator(balancerV2Simulator).calcOutGivenInForStable(_stableQuery) returns (uint256 balQuote) {
+                        _quote = balQuote;
+                    } catch  {
+                        _quote = 0;
+                    }    
+
                 }
-            } catch (bytes memory) {
+            } catch {
                 // weighted pool math
                 {
                    uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
                    require(_weights.length == tokens.length, "!lenBAL");
                    ExactInQueryParam memory _query = ExactInQueryParam(tokenIn, tokenOut, balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn, IBalancerV2WeightedPool(_pool).getSwapFeePercentage());
-                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
+
+                    try IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query) returns (uint256 balQuote) {
+                        _quote = balQuote;
+                    } catch {
+                        _quote = 0;
+                    }
                 }
             }
         }
