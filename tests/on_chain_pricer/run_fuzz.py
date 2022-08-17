@@ -135,4 +135,5 @@ def test_fuzz_pricers(sell_token_num, amount):
 
   ## Compare quote.amountOut
   ## >= for equivalent or better value for any combination
+  ## NOTE: Have had a test fail by 1 wei, due to rounding prob
   assert v3_quote[1] >= v2_quote[1]
