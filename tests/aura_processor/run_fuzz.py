@@ -7,6 +7,8 @@ import pytest
   Fuzz
     Fuzz any random address and amount
     To ensure no revert will happen
+
+    ## This will take almost an hour. Consider using foundry :P
 """
 LIVE_PROCESSOR = "0x8abd28e4d69bd3953b96dd9ed63533765adb9965"
 
