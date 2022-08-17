@@ -104,11 +104,11 @@ BRIBES_TOKEN_CLAIMABLE = [
 
 
 ### Sell Bribes for Weth
-@given(amount=strategy("uint256"), sell_token_num=strategy("uint256"))
-def test_fuzz_pricers(sell_token_num, amount):
+@given(amount=strategy("uint256"), sell_token_num=strategy("uint256"), buy_token_num=strategy("uint256"))
+def test_fuzz_pricers(sell_token_num, buy_token_num, amount):
 
   sell_token = interface.ERC20(BRIBES_TOKEN_CLAIMABLE[sell_token_num % len(BRIBES_TOKEN_CLAIMABLE)][0])
-  buy_token = interface.ERC20(BRIBES_TOKEN_CLAIMABLE[sell_token_num % len(BRIBES_TOKEN_CLAIMABLE)][0])
+  buy_token = interface.ERC20(BRIBES_TOKEN_CLAIMABLE[buy_token_num % len(BRIBES_TOKEN_CLAIMABLE)][0])
   
   ## Skip if amt = 0
   if amount == 0:
