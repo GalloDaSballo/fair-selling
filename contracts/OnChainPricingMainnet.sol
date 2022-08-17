@@ -106,8 +106,12 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
     
     address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
+    address public constant DIGG = 0x798D1bE841a82a273720CE31c822C61a67a601C3;
     bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
-    bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;// Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
+    bytes32 public constant BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID = 0x8eb6c82c3081bbbd45dcac5afa631aac53478b7c000100000000000000000270;
+
+    // NOTE: Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
+    bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;
 
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
@@ -604,11 +608,17 @@ contract OnChainPricingMainnet {
             return BALANCERV2_AURA_WETH_POOLID;
         } else if (token0 == BALWETHBPT && token1 == AURABAL){
             return BALANCERV2_AURABAL_BALWETH_POOLID;
-            // TODO CHANGE
         } else if (token0 == AURABAL && token1 == WETH){
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
         } else if (token0 == GRAVIAURA && token1 == WETH){
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
+
+            // TODO: TEST
+        } else if (token0 == WBTC && token1 == DIGG){
+            return BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID;
+        } else if (token0 == DIGG && token1 == GRAVIAURA){
+            return BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID;
+        
         } else{
             return BALANCERV2_NONEXIST_POOLID;
         }		
