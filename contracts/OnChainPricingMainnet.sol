@@ -626,9 +626,11 @@ contract OnChainPricingMainnet {
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
     function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
-        (address pool, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
-
-        return (pool, curveQuote);
+        try ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn) returns (address pool, uint256 curveQuote) {
+            return (pool, curveQuote);
+        } catch {
+            return (address(0), 0);
+        }
     }
 	
     /// @return assembled curve pools and fees in required Quote struct for given pool
