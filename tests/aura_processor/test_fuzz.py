@@ -52,6 +52,7 @@ def test_fuzz_processing(sell_token_num, amount):
 
   ## NOTE: Put all the fixtures here cause I keep getting reverts
   #### FIXTURES ###
+  
   ## NOTE: We have 5% slippage on this one
   univ3simulator = UniV3SwapSimulator.deploy({"from": accounts[0]})
   balancerV2Simulator = BalancerSwapSimulator.deploy({"from": accounts[0]})
