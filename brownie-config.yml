@@ -26,4 +26,4 @@ reports:
 
 
 hypothesis:
-  max_examples: 1000
+  max_examples: 100
