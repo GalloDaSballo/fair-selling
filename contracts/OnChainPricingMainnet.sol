@@ -612,8 +612,6 @@ contract OnChainPricingMainnet {
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
         } else if (token0 == GRAVIAURA && token1 == WETH){
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
-
-            // TODO: TEST
         } else if (token0 == WBTC && token1 == DIGG){
             return BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID;
         } else if (token0 == DIGG && token1 == GRAVIAURA){
