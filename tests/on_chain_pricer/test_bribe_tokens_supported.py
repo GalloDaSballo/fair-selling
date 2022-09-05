@@ -87,6 +87,6 @@ def test_are_bribes_supported(pricerwrapper, token):
   res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
   
-  quote = pricer.findOptimalSwap.call(token, WETH, AMOUNT)
+  quote = pricer.findOptimalSwap(token, WETH, AMOUNT)
   assert quote[1][1] > 0
 
