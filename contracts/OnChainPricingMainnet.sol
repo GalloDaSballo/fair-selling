@@ -378,7 +378,11 @@ contract OnChainPricingMainnet {
              }
 			 
              UniV3SortPoolQuery memory _sortQuery = UniV3SortPoolQuery(_pool, token0, token1, _fee, amountIn, token0Price);
-             return IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery);
+            try IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery) returns (bool _crossTicks, uint256 _inRangeSimOut){
+                 return (_crossTicks, _inRangeSimOut);
+             } catch {
+                 return (false, 0);			 
+             }
         }
     }
 	
@@ -430,7 +434,11 @@ contract OnChainPricingMainnet {
     /// @dev simulate Uniswap V3 swap using its tick-based math for given parameters
     /// @dev check helper UniV3SwapSimulator for more
     function simulateUniV3Swap(address token0, uint256 amountIn, address token1, uint24 _fee, bool token0Price, address _pool) public view returns (uint256) {
-        return IUniswapV3Simulator(uniV3Simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn);
+        try IUniswapV3Simulator(uniV3Simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn) returns (uint256 _simOut) {
+             return _simOut;
+        } catch {
+             return 0;			
+        }
     }	
 	
     /// @dev Given the address of the input token & amount & the output token
