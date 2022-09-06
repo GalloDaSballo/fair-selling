@@ -1,13 +1,14 @@
 import pytest
 from brownie import *
 
-## NOTE: Removed as we're testing with 1e18
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
 
 ## Mostly Aura
 AURA = "0xC0c293ce456fF0ED870ADd98a0828Dd4d2903DBF"
 AURA_BAL = "0x616e8BfA43F920657B3497DBf40D6b1A02D4608d"
+
+BADGER = "0x3472A5A71965499acd81997a54BBA8D852C6E53d"
 
 SD = "0x30d20208d987713f46dfd34ef128bb16c404d10f" ## Pretty much completely new token https://etherscan.io/token/0x30d20208d987713f46dfd34ef128bb16c404d10f#balances
 
@@ -29,12 +30,26 @@ INV = "0x41d5d79431a913c4ae7d69a668ecdfe5ff9dfb68"
 FXS = "0x3432B6A60D23Ca0dFCa7761B7ab56459D9C964D0"
 
 
+## More Random Votium stuff
+TUSD = "0x0000000000085d4780B73119b644AE5ecd22b376"
+STG = "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6"
+LYRA = "0x01BA67AAC7f75f647D94220Cc98FB30FCc5105Bf"
+JPEG = "0xE80C0cd204D654CEbe8dd64A4857cAb6Be8345a3"
+GRO = "0x3Ec8798B81485A254928B70CDA1cf0A2BB0B74D7"
+EURS = "0xdB25f211AB05b1c97D595516F45794528a807ad8"
+
+## New Aura Pools
+DIGG = "0x798D1bE841a82a273720CE31c822C61a67a601C3"
+GRAVI_AURA = "0xBA485b556399123261a5F9c95d413B4f93107407"
+
 TOKENS_18_DECIMALS = [
+  USDC,
   AURA,
-  AURA_BAL, ## Not Supported -> To FIX TODO ADD BAL POOL
-  #SD, ## Not Supported -> Cannot fix at this time
+  AURA_BAL,
+  BADGER,
+  SD, ## Not Supported -> Cannot fix at this time
   DFX,
-  #FDT, ## Not Supported -> Cannot fix at this time
+  FDT, ## Not Supported -> Cannot fix at this time
   LDO,
   COW,
   GNO,
@@ -43,7 +58,19 @@ TOKENS_18_DECIMALS = [
   TRIBE,
   FLX,
   INV,
-  FXS
+  FXS,
+
+  ## More Coins
+  TUSD,
+  STG,
+  LYRA,
+  JPEG,
+  GRO,
+  EURS,
+
+  ## From new Balancer Pools
+  DIGG,
+  GRAVI_AURA
 ]
 
 @pytest.mark.parametrize("token", TOKENS_18_DECIMALS)
@@ -60,6 +87,6 @@ def test_are_bribes_supported(pricerwrapper, token):
   res = pricer.isPairSupported(token, WETH, AMOUNT)
   assert res
   
-  quote = pricer.findOptimalSwap.call(token, WETH, AMOUNT)
+  quote = pricer.findOptimalSwap(token, WETH, AMOUNT)
   assert quote[1][1] > 0
 

@@ -106,8 +106,12 @@ contract OnChainPricingMainnet {
     bytes32 public constant BALANCERV2_AURABAL_BALWETH_POOLID = 0x3dd0843a028c86e0b760b1a76929d1c5ef93a2dd000200000000000000000249;
     
     address public constant GRAVIAURA = 0xBA485b556399123261a5F9c95d413B4f93107407;
+    address public constant DIGG = 0x798D1bE841a82a273720CE31c822C61a67a601C3;
     bytes32 public constant BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID = 0x0578292cb20a443ba1cde459c985ce14ca2bdee5000100000000000000000269;
-    bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;// Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
+    bytes32 public constant BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID = 0x8eb6c82c3081bbbd45dcac5afa631aac53478b7c000100000000000000000270;
+
+    // NOTE: Not used due to possible migration： https://forum.balancer.fi/t/vulnerability-disclosure/3179
+    bytes32 public constant BALANCERV2_DAI_USDC_USDT_POOLID = 0x06df3b2bbb68adc8b0e302443692037ed9f91b42000000000000000000000063;
 
     address public constant AURABAL = 0x616e8BfA43F920657B3497DBf40D6b1A02D4608d;
     address public constant BALWETHBPT = 0x5c6Ee304399DBdB9C8Ef030aB642B10820DB8F56;
@@ -374,7 +378,11 @@ contract OnChainPricingMainnet {
              }
 			 
              UniV3SortPoolQuery memory _sortQuery = UniV3SortPoolQuery(_pool, token0, token1, _fee, amountIn, token0Price);
-             return IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery);
+            try IUniswapV3Simulator(uniV3Simulator).checkInRangeLiquidity(_sortQuery) returns (bool _crossTicks, uint256 _inRangeSimOut){
+                 return (_crossTicks, _inRangeSimOut);
+             } catch {
+                 return (false, 0);			 
+             }
         }
     }
 	
@@ -426,7 +434,11 @@ contract OnChainPricingMainnet {
     /// @dev simulate Uniswap V3 swap using its tick-based math for given parameters
     /// @dev check helper UniV3SwapSimulator for more
     function simulateUniV3Swap(address token0, uint256 amountIn, address token1, uint24 _fee, bool token0Price, address _pool) public view returns (uint256) {
-        return IUniswapV3Simulator(uniV3Simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn);
+        try IUniswapV3Simulator(uniV3Simulator).simulateUniV3Swap(_pool, token0, token1, token0Price, _fee, amountIn) returns (uint256 _simOut) {
+             return _simOut;
+        } catch {
+             return 0;			
+        }
     }	
 	
     /// @dev Given the address of the input token & amount & the output token
@@ -516,15 +528,26 @@ contract OnChainPricingMainnet {
                 // stable pool math
                 {
                    ExactInStableQueryParam memory _stableQuery = ExactInStableQueryParam(tokens, balances, currentAmp, _inTokenIdx, _outTokenIdx, amountIn, IBalancerV2StablePool(_pool).getSwapFeePercentage());
-                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenInForStable(_stableQuery);
+
+                    try IBalancerV2Simulator(balancerV2Simulator).calcOutGivenInForStable(_stableQuery) returns (uint256 balQuote) {
+                        _quote = balQuote;
+                    } catch  {
+                        _quote = 0;
+                    }    
+
                 }
-            } catch (bytes memory) {
+            } catch {
                 // weighted pool math
                 {
                    uint256[] memory _weights = IBalancerV2WeightedPool(_pool).getNormalizedWeights();
                    require(_weights.length == tokens.length, "!lenBAL");
                    ExactInQueryParam memory _query = ExactInQueryParam(tokenIn, tokenOut, balances[_inTokenIdx], _weights[_inTokenIdx], balances[_outTokenIdx], _weights[_outTokenIdx], amountIn, IBalancerV2WeightedPool(_pool).getSwapFeePercentage());
-                   _quote = IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query);
+
+                    try IBalancerV2Simulator(balancerV2Simulator).calcOutGivenIn(_query) returns (uint256 balQuote) {
+                        _quote = balQuote;
+                    } catch {
+                        _quote = 0;
+                    }
                 }
             }
         }
@@ -593,11 +616,15 @@ contract OnChainPricingMainnet {
             return BALANCERV2_AURA_WETH_POOLID;
         } else if (token0 == BALWETHBPT && token1 == AURABAL){
             return BALANCERV2_AURABAL_BALWETH_POOLID;
-            // TODO CHANGE
         } else if (token0 == AURABAL && token1 == WETH){
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
         } else if (token0 == GRAVIAURA && token1 == WETH){
             return BALANCERV2_AURABAL_GRAVIAURA_WETH_POOLID;
+        } else if (token0 == WBTC && token1 == DIGG){
+            return BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID;
+        } else if (token0 == DIGG && token1 == GRAVIAURA){
+            return BALANCER_V2_WBTC_DIGG_GRAVIAURA_POOLID;
+        
         } else{
             return BALANCERV2_NONEXIST_POOLID;
         }		
@@ -607,9 +634,11 @@ contract OnChainPricingMainnet {
 
     /// @dev Given the address of the CurveLike Router, the input amount, and the path, returns the quote for it
     function getCurvePrice(address router, address tokenIn, address tokenOut, uint256 amountIn) public view returns (address, uint256) {
-        (address pool, uint256 curveQuote) = ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn);
-
-        return (pool, curveQuote);
+        try ICurveRouter(router).get_best_rate(tokenIn, tokenOut, amountIn) returns (address pool, uint256 curveQuote) {
+            return (pool, curveQuote);
+        } catch {
+            return (address(0), 0);
+        }
     }
 	
     /// @return assembled curve pools and fees in required Quote struct for given pool

@@ -11,17 +11,29 @@ DEV_MULTI = "0xB65cef03b9B89f99517643226d76e286ee999e77"
 WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 
-def main():
-    pricer = OnChainPricingMainnet.deploy({"from": a[0]})
+SLIPPAGE = 0.98 ## 2%
 
-    c = CowSwapDemoSeller.deploy(pricer, {"from": a[0]})
+def main():
+    """
+        DEMO ORDER
+        Customize to use it for real life usage
+    """
+    dev  = connect_account()
+
+    seller = CowSwapDemoSeller.at("0x75547825A99283379e0E812B7c10F832813326d6")
 
     usdc = interface.ERC20(USDC)
     weth = interface.ERC20(WETH)
 
-    amount = 1000000000000000000
+    amount = usdc.balanceOf(seller)
 
-    cowswap_sell_demo(c, weth, usdc, amount, a[0])
+    order_data = get_cowswap_order(seller, usdc, weth, amount)
+
+    data = order_data.order_data
+    uid = order_data.order_uid
+
+    seller.initiateCowswapOrder(data, uid, {"from": dev})
+
 
 def get_cowswap_order(contract, sell_token, buy_token, amount_in):
     """
@@ -137,7 +149,7 @@ def cowswap_sell_demo(contract, sell_token, buy_token, amount_in):
         "sellToken": sell_token.address,
         "buyToken": buy_token.address,
         "sellAmount": str(amount-fee_amount), # amount that we have minus the fee we have to pay
-        "buyAmount": str(buy_amount_after_fee), # buy amount fetched from the previous call
+        "buyAmount": str(buy_amount_after_fee * SLIPPAGE), # buy amount fetched from the previous call
         "validTo": deadline,
         "appData": "0x2B8694ED30082129598720860E8E972F07AA10D9B81CAE16CA0E2CFB24743E24", # maps to https://bafybeiblq2ko2maieeuvtbzaqyhi5fzpa6vbbwnydsxbnsqoft5si5b6eq.ipfs.dweb.link
         "feeAmount": str(fee_amount),

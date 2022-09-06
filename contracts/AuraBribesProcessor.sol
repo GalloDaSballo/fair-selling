@@ -162,7 +162,6 @@ contract AuraBribesProcessor is CowSwapSeller {
     /// @dev
     /// Step 3 Emit the Aura
     /// Takes all the Aura, takes fee, locks and emits it
-    // TODO: REDO MATH to handle case of AURA / graviAURA already in this contract
     function swapAURATobveAURAAndEmit() external nonReentrant {
         // Will take all the Aura left,
         // swap it for bveAura if cheaper, or deposit it directly
