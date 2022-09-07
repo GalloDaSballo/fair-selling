@@ -8,7 +8,9 @@ import pytest
     Fuzz any random address and amount
     To ensure no revert will happen
 
-    ## This will take almost an hour. Consider using foundry :P
+  Fuzz Test with Cowswap Orders for Live Setup
+
+  For future migrations use other tests
 """
 LIVE_PROCESSOR = "0x8abd28e4d69bd3953b96dd9ed63533765adb9965"
 LIVE_PRICER = "0x2DC7693444aCd1EcA1D6dE5B3d0d8584F3870c49"
@@ -124,8 +126,18 @@ def test_fuzz_processing(sell_token_num, amount):
   if str(web3.eth.getCode(str(sell_token.address))) == "b''":
     return True
 
-  ## NOTE: We do not set anything as it's already been migrated
+
+  ## NOTE: Put all the fixtures here cause I keep getting reverts
+  #### FIXTURES ###
+  
+  ## NOTE: We have 5% slippage on this one
+  lenient_pricer_fuzz = OnChainPricingMainnetLenient.at(LIVE_PRICER)
+  lenient_pricer_fuzz.setSlippage(499, {"from": accounts.at(lenient_pricer_fuzz.TECH_OPS(), force=True)})
+
   setup_processor = AuraBribesProcessor.at(LIVE_PROCESSOR)
+
+  dev_multi = accounts.at(setup_processor.DEV_MULTI(), force=True)
+  setup_processor.setPricer(lenient_pricer_fuzz, {"from": dev_multi})
 
   
   settlement_fuzz = interface.ICowSettlement(setup_processor.SETTLEMENT())
